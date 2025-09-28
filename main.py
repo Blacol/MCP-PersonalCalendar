@@ -111,11 +111,18 @@ async def creat_events(events:List[str]):
     """
     创建多个日程
     （所有日期的格式是：年（4位）-月（2位）-日（2位）T小时（2位）:分钟（2位）:秒（2位））
+
     CalendarEventInfo中的属性：
         name(str):日程名
         start_time(str)：开始时间
         end_time(str)：结束时间
         calendar_name(str)：所属日历
+
+    参数例子：
+    [
+      "{\"name\": \"吃晚饭\", \"start_time\": \"2025-09-28T17:00:00\", \"end_time\": \"2025-09-28T18:00:00\", \"calendar_name\": \"个人日历\"}",
+      "{\"name\": \"聚餐\", \"start_time\": \"2025-09-29T17:00:00\", \"end_time\": \"2025-09-29T18:00:00\", \"calendar_name\": \"工作日历\"}",
+    ]
     :param events: 日程列表，是一个CalendarEventInfo类的对象JSON字符串，如果日程所属的日历不清晰，则统一添加到caldav中第一个日历中。
     :return: 完成状态
     """
@@ -190,6 +197,66 @@ async def creat_todo(calendar_name:str,name:str,start_time:str,end_time:str,prio
             return f"将待办{name}添加到日历{calendar.get_display_name()}成功"
         else:
             return "添加日程失败"
+
+
+@fastMCP.tool("create_todos")
+async def creat_todos(todos: List[str]):
+    """
+    创建多个任务
+    （所有日期的格式是：年（4位）-月（2位）-日（2位）T小时（2位）:分钟（2位）:秒（2位））
+
+    CalendarTodoInfo中的属性：
+        name(str): 待办名
+        start_time(str)：开始时间
+        end_time(str)：结束时间
+        calendar_name(str)：所属日历的名字
+        priority(int)=0：优先级
+
+    参数例子：
+    [
+      "{\"name\": \"吃晚饭\", \"start_time\": \"2025-09-28T17:00:00\", \"end_time\": \"2025-09-28T18:00:00\", \"calendar_name\": \"个人日历\",\"priority\":0}",
+      "{\"name\": \"聚餐\", \"start_time\": \"2025-09-29T17:00:00\", \"end_time\": \"2025-09-29T18:00:00\", \"calendar_name\": \"工作日历\",\"priority\":1}"
+    ]
+    :param todos: 日程列表，是一个CalendarEventInfo类的对象JSON字符串，如果日程所属的日历不清晰，则统一添加到caldav中第一个日历中。
+    :return: 完成状态
+    """
+    principal = client.principal()
+    calendars = principal.calendars()
+    # 先获取整个日程列表中用到的日历有哪些
+    logger.debug("搜索日历中...")
+    calendar_names = {}
+    success = []
+    fail = []
+    for todo in todos:
+        # ee=json.loads(event, object_hook=CalendarEventInfo.from_dic)
+        td = json.loads(todo)
+        if td["calendar_name"] not in calendar_names:
+            calendar_names[td["calendar_name"]] = None
+    for cn in calendar_names:
+        for c in calendars:
+            if re.match(f"(.*){cn}(.*)", c.get_display_name()):
+                calendar_names[cn] = c
+                logger.debug("已经创建日历列表")
+    for todo in todos:
+        # 处理日历不存在的情况
+        td = json.loads(todo)
+        td["start_time"] = to_datetime(td["start_time"])
+        td["end_time"] = to_datetime(td["end_time"])
+        tt = CalendarTodoInfo.from_dic(td)
+        if tt.calendar_name not in calendar_names:
+            tt.calendar_name = calendars[0].get_display_name()
+        calendar = calendar_names[tt.calendar_name]
+        ct = calendar.save_todo(summary=tt.name, dtstart=tt.start_time, due=tt.end_time,priority=td["priority"])
+        if ct != None:
+            logger.debug(f"将任务{tt.name}添加到日历{calendar.get_display_name()}成功")
+            success.append(ct)
+        else:
+            logger.debug(f"将任务{tt.name}添加到日历{calendar.get_display_name()}失败")
+            fail.append(ct)
+    return f"""成功添加{len(success)}个任务，失败{len(fail)}个任务
+    以下任务成功：{[i.name for i in success]}
+    以下任务失败：{[i.name for i in fail]}
+    """
 @fastMCP.tool("list_calendars")
 async def list_calendars():
     """

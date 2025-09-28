@@ -33,7 +33,7 @@ class CalendarEventInfo:
         return CalendarEventInfo(dic["calendar_name"],dic["name"],dic["start_time"],dic["end_time"])
     def to_LLM(self)->str:
         return f"日历：{self.calendar_name}，日程：{self.name}\n时间：{self.start_time}~{self.end_time}\n"
-class CalendarTodoInfo(BaseModel):
+class CalendarTodoInfo:
     """
     日历待办信息类
     属性:
@@ -44,12 +44,12 @@ class CalendarTodoInfo(BaseModel):
         status(str)：任务状态
         priority(int)=0：优先级
     """
-    def __init__(self,calendar_name:str,name:str,start_time:datetime,end_time:datetime,status:str,priority:int=0):
+    def __init__(self,calendar_name:str,name:str,start_time:datetime,end_time:datetime,priority:int=0):
         self.name=name
         self.start_time=start_time
         self.end_time=end_time
         self.calendar_name=calendar_name
-        self.status=status
+        self.status=""
         self.priority=priority
     def to_dict(self):
         return {
@@ -60,5 +60,9 @@ class CalendarTodoInfo(BaseModel):
             "status":self.status,
             "priority":self.priority
         }
+
+    @staticmethod
+    def from_dic(dic):
+        return CalendarTodoInfo(dic["calendar_name"],dic["name"],dic["start_time"],dic["end_time"],dic["priority"])
     def to_LLM(self)->str:
         return f"日历：{self.calendar_name}，待办：{self.name}\n时间：{self.start_time}~{self.end_time}\n状态：{self.status}\n优先级：{self.priority}\n"
