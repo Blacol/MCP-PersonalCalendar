@@ -101,7 +101,7 @@ async def creat_event(calendar_name:str,name:str,start_time:str,end_time:str,loc
         return "未找到日历"
     else:
         event=calendar.save_event(summary=name,location=location,dtstart=new_start_time,dtend=new_end_time)
-        logger.debug(f"已创建日程：{event.icalendar_component['STATUS']}，日历：{calendar.get_display_name()}")
+        logger.debug(f"生成日程：{event.icalendar_component['SUMMARY']}，日历：{calendar.get_display_name()}")
         if event!=None:
             logger.debug( f"将日程{name}添加到日历{calendar.get_display_name()}成功")
             return f"将日程{name}添加到日历{calendar.get_display_name()}成功"
@@ -133,7 +133,7 @@ async def creat_todo(calendar_name:str,name:str,start_time:str,end_time:str,prio
         return "未找到日历"
     else:
         event=calendar.save_todo(summary=name,dtstart=new_start_time,due=new_end_time,priority= priority)
-        logger.debug(f"已创建任务：{event.icalendar_component['STATUS']}，日历：{calendar.get_display_name()}")
+        logger.debug(f"生成待办：{event.icalendar_component['SUMMARY']}，日历：{calendar.get_display_name()}")
         if event!=None:
             logger.debug( f"将待办{name}添加到日历{calendar.get_display_name()}成功")
             return f"将待办{name}添加到日历{calendar.get_display_name()}成功"
