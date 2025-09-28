@@ -1,8 +1,6 @@
 import json
 import logging
 
-import mcp.server.fastmcp.server
-from icalendar.cal import Alarm
 from mcp.server.fastmcp import FastMCP
 from caldav.davclient import get_davclient
 from datetime import datetime
