@@ -46,8 +46,8 @@ async def get_todo(start_time:str,end_time:str,done:str="False"):
     获取指定日期的待办事项
     （所有日期的格式是：年（4位）-月（2位）-日（2位）T小时（2位）:分钟（2位）:秒（2位））
     :param start_time: 指定的开始日期
-    :end_time: 指定的结束日期
-    :done: 是否返回已经完成的任务？True返回已完成和未完成的任务，False不返回已完成的任务只返回未完成的任务，Done只返回已完成的任务
+    :param end_time: 指定的结束日期
+    :param done: 是否返回已经完成的任务？True返回已完成和未完成的任务，False不返回已完成的任务只返回未完成的任务，Done只返回已完成的任务
     :return: 待办信息（优先级为0表示未设置。数值越高优先级越高）
     """
     principal=client.principal()
@@ -60,7 +60,8 @@ async def get_todo(start_time:str,end_time:str,done:str="False"):
         events = calendar.date_search(start=new_start_time, end=new_end_time,compfilter="VTODO")
         for event in events:
             eventInfo=CalendarTodoInfo(calendar.get_display_name(),event.icalendar_component["SUMMARY"],event.icalendar_component["DTSTART"].dt,event.icalendar_component.get("DUE","").dt
-                                       ,event.icalendar_component["PRIORITY"])
+                                       ,event.icalendar_component.get("PRIORITY",0))
+            eventInfo.status=event.icalendar_component.get("STATUS","")
             logger.debug(f"已找到任务：{eventInfo.to_dict()}")
             if done !='True' and done !='Done':
                 if eventInfo.status=="COMPLETED":
