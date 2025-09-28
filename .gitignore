@@ -12,3 +12,4 @@ wheels/
 /uv.lock
 /.python-version
 /log/
+config.json
