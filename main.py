@@ -59,8 +59,8 @@ async def get_todo(start_time:str,end_time:str,done:str="False"):
     for calendar in calendars:
         events = calendar.date_search(start=new_start_time, end=new_end_time,compfilter="VTODO")
         for event in events:
-            eventInfo=CalendarTodoInfo(calendar.get_display_name(),event.icalendar_component["SUMMARY"],event.icalendar_component["DTSTART"].dt,event.icalendar_component.get("DUE","").dt,
-                                       event.icalendar_component.get("STATUS",""),event.icalendar_component["PRIORITY"])
+            eventInfo=CalendarTodoInfo(calendar.get_display_name(),event.icalendar_component["SUMMARY"],event.icalendar_component["DTSTART"].dt,event.icalendar_component.get("DUE","").dt
+                                       ,event.icalendar_component["PRIORITY"])
             logger.debug(f"已找到任务：{eventInfo.to_dict()}")
             if done !='True' and done !='Done':
                 if eventInfo.status=="COMPLETED":
