@@ -1,5 +1,6 @@
 import json
 import logging
+from typing import List
 
 from mcp.server.fastmcp import FastMCP
 from caldav.davclient import get_davclient
@@ -105,6 +106,58 @@ async def creat_event(calendar_name:str,name:str,start_time:str,end_time:str,loc
             return f"将日程{name}添加到日历{calendar.get_display_name()}成功"
         else:
             return "添加日程失败"
+@fastMCP.tool("create_events")
+async def creat_events(events:List[str]):
+    """
+    创建多个日程
+    （所有日期的格式是：年（4位）-月（2位）-日（2位）T小时（2位）:分钟（2位）:秒（2位））
+    CalendarEventInfo中的属性：
+        name(str):日程名
+        start_time(str)：开始时间
+        end_time(str)：结束时间
+        calendar_name(str)：所属日历
+    :param events: 日程列表，是一个CalendarEventInfo类的对象JSON字符串，如果日程所属的日历不清晰，则统一添加到caldav中第一个日历中。
+    :return: 完成状态
+    """
+    principal = client.principal()
+    calendars = principal.calendars()
+    # 先获取整个日程列表中用到的日历有哪些
+    logger.debug("搜索日历中...")
+    calendar_names={}
+    success=[]
+    fail=[]
+    for event in events:
+        # ee=json.loads(event, object_hook=CalendarEventInfo.from_dic)
+        ed=json.loads(event)
+        if ed["calendar_name"] not in calendar_names:
+            calendar_names[ed["calendar_name"]]=None
+    for cn in calendar_names:
+        for c in calendars:
+            if re.match(f"(.*){cn}(.*)",c.get_display_name()):
+                calendar_names[cn]=c
+                logger.debug("已经创建日历列表")
+    for event in events:
+        # 处理日历不存在的情况
+        ed = json.loads(event)
+        ed["start_time"] = to_datetime(ed["start_time"])
+        ed["end_time"] = to_datetime(ed["end_time"])
+        ee = CalendarEventInfo.from_dic(ed)
+        if ee.calendar_name not in calendar_names:
+            ee.calendar_name=calendars[0].get_display_name()
+        calendar=calendar_names[ee.calendar_name]
+        ce=calendar.save_event(summary=ee.name,dtstart=ee.start_time,dtend=ee.end_time)
+        if ce!=None:
+            logger.debug(f"将日程{ee.name}添加到日历{calendar.get_display_name()}成功")
+            success.append(ee)
+        else:
+            logger.debug(f"将日程{ee.name}添加到日历{calendar.get_display_name()}失败")
+            fail.append(ee)
+    return f"""成功添加{len(success)}个日程，失败{len(fail)}个日程
+    以下日程成功：{[i.name for i in success]}
+    以下日程失败：{[i.name for i in fail]}
+    """
+
+
 @fastMCP.tool("create_todo")
 async def creat_todo(calendar_name:str,name:str,start_time:str,end_time:str,priority:int=0):
     """
