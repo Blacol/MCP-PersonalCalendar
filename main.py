@@ -18,8 +18,7 @@ def to_datetime(strDatetime:str,format="%Y-%m-%dT%H:%M:%S"):
 @fastMCP.tool("get_event")
 async def get_events(start_time:str,end_time:str):
     """
-    获取指定日期的日程
-    （所有日期的格式是：年（4位）-月（2位）-日（2位）T小时（2位）:分钟（2位）:秒（2位））
+    获取指定日期的日程（日期的格式是：2025-09-29T10:00:00）
     :param start_time: 指定的开始日期
     :end_time: 指定的结束日期
     :return: 日程信息
@@ -43,12 +42,11 @@ async def get_events(start_time:str,end_time:str):
 @fastMCP.tool("get_todo")
 async def get_todo(start_time:str,end_time:str,done:str="False"):
     """
-    获取指定日期的待办事项
-    （所有日期的格式是：年（4位）-月（2位）-日（2位）T小时（2位）:分钟（2位）:秒（2位））
+    获取指定日期的待办事项（日期的格式是：2025-09-29T10:00:00）
     :param start_time: 指定的开始日期
     :param end_time: 指定的结束日期
-    :param done: 是否返回已经完成的任务？True返回已完成和未完成的任务，False不返回已完成的任务只返回未完成的任务，Done只返回已完成的任务
-    :return: 待办信息（优先级为0表示未设置。数值越高优先级越高）
+    :param done: True返回所有任务，False只返回未完成的任务，Done只返回已完成的任务
+    :return: 待办信息（数值越高优先级越高）
     """
     principal=client.principal()
     calendars=principal.calendars()
@@ -78,8 +76,7 @@ async def get_todo(start_time:str,end_time:str,done:str="False"):
 @fastMCP.tool("create_event")
 async def creat_event(calendar_name:str,name:str,start_time:str,end_time:str,location:str=""):
     """
-    创建日程
-    （所有日期的格式是：年（4位）-月（2位）-日（2位）T小时（2位）:分钟（2位）:秒（2位））
+    创建日程（日期的格式是：2025-09-29T10:00:00）
     :param calendar_name: 指定的日历名称（模糊查询），用户未指定时询问用户保存到哪个日历里
     :param name: 日程名
     :param start_time: 日程开始时间
@@ -170,7 +167,6 @@ async def creat_events(events:List[str]):
 async def creat_todo(calendar_name:str,name:str,start_time:str,end_time:str,priority:int=0):
     """
     创建日程
-    （所有日期的格式是：年（4位）-月（2位）-日（2位）T小时（2位）:分钟（2位）:秒（2位））
     :param calendar_name: 指定的日历名称（模糊查询），用户未指定时询问用户保存到哪个日历里
     :param name: 日程名
     :param start_time: 日程开始时间
@@ -204,21 +200,12 @@ async def creat_todo(calendar_name:str,name:str,start_time:str,end_time:str,prio
 async def creat_todos(todos: List[str]):
     """
     创建多个任务
-    （所有日期的格式是：年（4位）-月（2位）-日（2位）T小时（2位）:分钟（2位）:秒（2位））
-
-    CalendarTodoInfo中的属性：
-        name(str): 待办名
-        start_time(str)：开始时间
-        end_time(str)：结束时间
-        calendar_name(str)：所属日历的名字
-        priority(int)=0：优先级
-
     参数例子：
     [
       "{\"name\": \"吃晚饭\", \"start_time\": \"2025-09-28T17:00:00\", \"end_time\": \"2025-09-28T18:00:00\", \"calendar_name\": \"个人日历\",\"priority\":0}",
       "{\"name\": \"聚餐\", \"start_time\": \"2025-09-29T17:00:00\", \"end_time\": \"2025-09-29T18:00:00\", \"calendar_name\": \"工作日历\",\"priority\":1}"
     ]
-    :param todos: 日程列表，是一个CalendarEventInfo类的对象JSON字符串，如果日程所属的日历不清晰，则统一添加到caldav中第一个日历中。
+    :param todos: 日程列表，参考“参数例子”。如果日程所属的日历不清晰，则统一添加到caldav中第一个日历中。
     :return: 完成状态
     """
     principal = client.principal()
