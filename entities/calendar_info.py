@@ -1,8 +1,5 @@
 from datetime import datetime
 
-from pydantic import BaseModel
-
-
 class CalendarEventInfo:
     """
     日历日程信息类

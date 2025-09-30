@@ -1,13 +1,10 @@
 import json
 import logging
 from typing import List
-
 from mcp.server.fastmcp import FastMCP
 from caldav.davclient import get_davclient
 from datetime import datetime
-
 import re
-
 from entities.calendar_info import CalendarEventInfo, CalendarTodoInfo
 
 fastMCP=FastMCP("Calendar")
