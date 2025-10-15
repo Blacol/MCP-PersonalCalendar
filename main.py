@@ -29,9 +29,10 @@ async def get_events(start_time:str,end_time:str,time_zone:str="Asia/Shanghai"):
     new_end_time=to_datetime(end_time,time_zone)
     for calendar in calendars:
         events = calendar.date_search(start=new_start_time, end=new_end_time)
-        print(events)
         for event in events:
             eventInfo=CalendarEventInfo(calendar.get_display_name(),event.icalendar_component["SUMMARY"],event.icalendar_component["DTSTART"].dt,event.icalendar_component["DTEND"].dt)
+            eventInfo.start_time=eventInfo.start_time.astimezone(pytz.timezone(time_zone))
+            eventInfo.end_time = eventInfo.end_time.astimezone(pytz.timezone(time_zone))
             logger.debug(f"已找到日程：{eventInfo.to_dict()}")
             events_result+=eventInfo.to_LLM()
 
@@ -53,6 +54,8 @@ async def get_todo(start_time:str,end_time:str,done:str="False",time_zone:str="A
         for event in events:
             eventInfo=CalendarTodoInfo(calendar.get_display_name(),event.icalendar_component["SUMMARY"],event.icalendar_component["DTSTART"].dt,event.icalendar_component.get("DUE","").dt
                                        ,event.icalendar_component.get("PRIORITY",0))
+            eventInfo.start_time = eventInfo.start_time.astimezone(pytz.timezone(time_zone))
+            eventInfo.end_time = eventInfo.end_time.astimezone(pytz.timezone(time_zone))
             eventInfo.status=event.icalendar_component.get("STATUS","")
             logger.debug(f"已找到任务：{eventInfo.to_dict()}")
             if done !='True' and done !='Done':
