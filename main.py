@@ -95,59 +95,59 @@ async def creat_event(calendar_name:str,name:str,start_time:str,end_time:str,loc
             return f"将日程{name}添加到日历{calendar.get_display_name()}成功"
         else:
             return "添加日程失败"
-@fastMCP.tool("create_events")
-async def creat_events(events:str,time_zone:str="Asia/Shanghai"):
-    """
-    创建多个日程（日期的格式是：2025-09-29T10:00:00），默认为东八区。支持修改时区。
-    输入样例（必须按照顺序设定name,start,end,cn），cn为日历名，多个日程之间用换行(\n)分隔：
-    name=吃午饭,start=2025-09-29T10:00:00,end=2025-09-29T10:15:00,cn=个人日历
-    name=打游戏,start=2025-09-29T12:00:00,end=2025-09-29T14:15:00,cn=个人日历
-    """
-    principal = client.principal()
-    calendars = principal.calendars()
-    # 先获取整个日程列表中用到的日历有哪些
-    logger.debug("搜索日历中...")
-    event_dicts=[]
-    success=[]
-    fail=[]
-
-    event_list=events.split("\n")
-    for event in event_list:
-        event_dict={s.split("=")[0]:s.split("=")[1] for s in event.split(",")}
-        event_dicts.append(event_dict)
-    # for event in event_list:
-        # 处理日历不存在的情况
-        # ed = json.loads(event)
-        # ed["start_time"] = to_datetime(ed["start_time"])
-        # ed["end_time"] = to_datetime(ed["end_time"])
-        # ee = CalendarEventInfo.from_dic(ed)
-        # if ee.calendar_name not in calendar_names:
-        #     ee.calendar_name=calendars[0].get_display_name()
-        # calendar=calendar_names[ee.calendar_name]
-        # ce=calendar.save_event(summary=ee.name,dtstart=ee.start_time,dtend=ee.end_time)
-        # if ce!=None:
-        #     logger.debug(f"将日程{ee.name}添加到日历{calendar.get_display_name()}成功")
-        #     success.append(ee)
-        # else:
-        #     logger.debug(f"将日程{ee.name}添加到日历{calendar.get_display_name()}失败")
-        #     fail.append(ee)
-    for ed in event_dicts:
-        name=ed["name"]
-        start=to_datetime(ed["start"],time_zone)
-        end=to_datetime(ed["end"],time_zone)
-        calendar_name=ed["cn"]
-        for c in calendars:
-            if re.match(f"(.*){calendar_name}(.*)",c.get_display_name()):
-                c.save_event(summary=name,dtstart=start,dtend=end)
-                success.append(name)
-                break
-        else:
-            logger.debug(f"未找到日历：{calendar_name}")
-            fail.append(name)
-    return f"""成功添加{len(success)}个日程，失败{len(fail)}个日程
-    以下日程成功：{[i for i in success]}
-    以下日程失败：{[i for i in fail]}
-    """
+# @fastMCP.tool("create_events")
+# async def creat_events(events:str,time_zone:str="Asia/Shanghai"):
+#     """
+#     创建多个日程（日期的格式是：2025-09-29T10:00:00），默认为东八区。支持修改时区。
+#     输入样例（必须按照顺序设定name,start,end,cn），cn为日历名，多个日程之间用换行(\n)分隔：
+#     name=吃午饭,start=2025-09-29T10:00:00,end=2025-09-29T10:15:00,cn=个人日历
+#     name=打游戏,start=2025-09-29T12:00:00,end=2025-09-29T14:15:00,cn=个人日历
+#     """
+#     principal = client.principal()
+#     calendars = principal.calendars()
+#     # 先获取整个日程列表中用到的日历有哪些
+#     logger.debug("搜索日历中...")
+#     event_dicts=[]
+#     success=[]
+#     fail=[]
+#
+#     event_list=events.split("\n")
+#     for event in event_list:
+#         event_dict={s.split("=")[0]:s.split("=")[1] for s in event.split(",")}
+#         event_dicts.append(event_dict)
+#     # for event in event_list:
+#         # 处理日历不存在的情况
+#         # ed = json.loads(event)
+#         # ed["start_time"] = to_datetime(ed["start_time"])
+#         # ed["end_time"] = to_datetime(ed["end_time"])
+#         # ee = CalendarEventInfo.from_dic(ed)
+#         # if ee.calendar_name not in calendar_names:
+#         #     ee.calendar_name=calendars[0].get_display_name()
+#         # calendar=calendar_names[ee.calendar_name]
+#         # ce=calendar.save_event(summary=ee.name,dtstart=ee.start_time,dtend=ee.end_time)
+#         # if ce!=None:
+#         #     logger.debug(f"将日程{ee.name}添加到日历{calendar.get_display_name()}成功")
+#         #     success.append(ee)
+#         # else:
+#         #     logger.debug(f"将日程{ee.name}添加到日历{calendar.get_display_name()}失败")
+#         #     fail.append(ee)
+#     for ed in event_dicts:
+#         name=ed["name"]
+#         start=to_datetime(ed["start"],time_zone)
+#         end=to_datetime(ed["end"],time_zone)
+#         calendar_name=ed["cn"]
+#         for c in calendars:
+#             if re.match(f"(.*){calendar_name}(.*)",c.get_display_name()):
+#                 c.save_event(summary=name,dtstart=start,dtend=end)
+#                 success.append(name)
+#                 break
+#         else:
+#             logger.debug(f"未找到日历：{calendar_name}")
+#             fail.append(name)
+#     return f"""成功添加{len(success)}个日程，失败{len(fail)}个日程
+#     以下日程成功：{[i for i in success]}
+#     以下日程失败：{[i for i in fail]}
+#     """
 
 
 @fastMCP.tool("create_todo")
@@ -183,59 +183,59 @@ async def creat_todo(calendar_name:str,name:str,start_time:str,end_time:str,prio
             return "添加日程失败"
 
 
-@fastMCP.tool("create_todos")
-async def creat_todos(todos: str,time_zone: str = "Asia/Shanghai"):
-    """
-    创建多个任务（日期的格式是：2025-09-29T10:00:00），默认为东八区。支持修改时区。
-    输入样例（必须按照顺序设定name,start,end,cn），cn为日历名，多个日程之间用换行(\n)分隔：
-    name=吃午饭,start=2025-09-29T10:00:00,end=2025-09-29T10:15:00,cn=个人日历,pr=0
-    name=打游戏,start=2025-09-29T12:00:00,end=2025-09-29T14:15:00,cn=个人日历,pr=1
-    """
-    principal = client.principal()
-    calendars = principal.calendars()
-    # 先获取整个日程列表中用到的日历有哪些
-    logger.debug("搜索日历中...")
-    todo_dicts=[]
-    success = []
-    fail = []
-    todo_list = todos.split("\n")
-    for todo in todo_list:
-        todo_dict = {s.split("=")[0]: s.split("=")[1] for s in todo.split(",")}
-        todo_dicts.append(todo_dict)
-    # for t in todos:
-    #     # 处理日历不存在的情况
-    #     td = json.loads(t)
-    #     td["start_time"] = to_datetime(td["start_time"])
-    #     td["end_time"] = to_datetime(td["end_time"])
-    #     tt = CalendarTodoInfo.from_dic(td)
-    #     if tt.calendar_name not in calendar_names:
-    #         tt.calendar_name = calendars[0].get_display_name()
-    #     calendar = calendar_names[tt.calendar_name]
-    #     ct = calendar.save_todo(summary=tt.name, dtstart=tt.start_time, due=tt.end_time,priority=td["priority"])
-    #     if ct != None:
-    #         logger.debug(f"将任务{tt.name}添加到日历{calendar.get_display_name()}成功")
-    #         success.append(ct)
-    #     else:
-    #         logger.debug(f"将任务{tt.name}添加到日历{calendar.get_display_name()}失败")
-    #         fail.append(ct)
-    for td in todo_dicts:
-        name=td["name"]
-        start=to_datetime(td["start"],time_zone)
-        end=to_datetime(td["end"],time_zone)
-        calendar_name=td["cn"]
-        pr=td["pr"]
-        for c in calendars:
-            if re.match(f"(.*){calendar_name}(.*)",c.get_display_name()):
-                c.save_todo(summary=name,dtstart=start,due=end,priority=pr)
-                success.append(name)
-                break
-        else:
-            logger.debug(f"未找到日历：{calendar_name}")
-            fail.append(name)
-    return f"""成功添加{len(success)}个任务，失败{len(fail)}个任务
-    以下任务成功：{[i for i in success]}
-    以下任务失败：{[i for i in fail]}
-    """
+# @fastMCP.tool("create_todos")
+# async def creat_todos(todos: str,time_zone: str = "Asia/Shanghai"):
+#     """
+#     创建多个任务（日期的格式是：2025-09-29T10:00:00），默认为东八区。支持修改时区。
+#     输入样例（必须按照顺序设定name,start,end,cn），cn为日历名，多个日程之间用换行(\n)分隔：
+#     name=吃午饭,start=2025-09-29T10:00:00,end=2025-09-29T10:15:00,cn=个人日历,pr=0
+#     name=打游戏,start=2025-09-29T12:00:00,end=2025-09-29T14:15:00,cn=个人日历,pr=1
+#     """
+#     principal = client.principal()
+#     calendars = principal.calendars()
+#     # 先获取整个日程列表中用到的日历有哪些
+#     logger.debug("搜索日历中...")
+#     todo_dicts=[]
+#     success = []
+#     fail = []
+#     todo_list = todos.split("\n")
+#     for todo in todo_list:
+#         todo_dict = {s.split("=")[0]: s.split("=")[1] for s in todo.split(",")}
+#         todo_dicts.append(todo_dict)
+#     # for t in todos:
+#     #     # 处理日历不存在的情况
+#     #     td = json.loads(t)
+#     #     td["start_time"] = to_datetime(td["start_time"])
+#     #     td["end_time"] = to_datetime(td["end_time"])
+#     #     tt = CalendarTodoInfo.from_dic(td)
+#     #     if tt.calendar_name not in calendar_names:
+#     #         tt.calendar_name = calendars[0].get_display_name()
+#     #     calendar = calendar_names[tt.calendar_name]
+#     #     ct = calendar.save_todo(summary=tt.name, dtstart=tt.start_time, due=tt.end_time,priority=td["priority"])
+#     #     if ct != None:
+#     #         logger.debug(f"将任务{tt.name}添加到日历{calendar.get_display_name()}成功")
+#     #         success.append(ct)
+#     #     else:
+#     #         logger.debug(f"将任务{tt.name}添加到日历{calendar.get_display_name()}失败")
+#     #         fail.append(ct)
+#     for td in todo_dicts:
+#         name=td["name"]
+#         start=to_datetime(td["start"],time_zone)
+#         end=to_datetime(td["end"],time_zone)
+#         calendar_name=td["cn"]
+#         pr=td["pr"]
+#         for c in calendars:
+#             if re.match(f"(.*){calendar_name}(.*)",c.get_display_name()):
+#                 c.save_todo(summary=name,dtstart=start,due=end,priority=pr)
+#                 success.append(name)
+#                 break
+#         else:
+#             logger.debug(f"未找到日历：{calendar_name}")
+#             fail.append(name)
+#     return f"""成功添加{len(success)}个任务，失败{len(fail)}个任务
+#     以下任务成功：{[i for i in success]}
+#     以下任务失败：{[i for i in fail]}
+#     """
 @fastMCP.tool("list_calendars")
 async def list_calendars():
     """
