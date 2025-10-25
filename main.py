@@ -21,7 +21,7 @@ async def get_events(start_time:str,end_time:str,time_zone:str="Asia/Shanghai"):
     """
     获取指定日期的日程（日期的格式是：2025-09-29T10:00:00），默认为东八区。支持修改时区
     """
-    logger.debug(f"请求查找开始时间：{start_time}，结束时间：{end_time}的日程，时区是：{time_zone}")
+    logger.debug(f"请求查找开始时间：{start_time}，结束时间：{end_time}的日程，时区是：{time_zone}的日程")
     principal=client.principal()
     calendars=principal.calendars()
     events_result=""""""
@@ -48,26 +48,30 @@ async def get_todo(start_time:str,end_time:str,done:str="False",time_zone:str="A
     events_result=""""""
     new_start_time=to_datetime(start_time,time_zone)
     new_end_time=to_datetime(end_time,time_zone)
-    logger.debug( f"请求查找开始时间：{start_time}，结束时间：{end_time}的日程，时区为：{time_zone}，模式为：{done}")
-    for calendar in calendars:
-        events = calendar.date_search(start=new_start_time, end=new_end_time,compfilter="VTODO")
-        for event in events:
-            eventInfo=CalendarTodoInfo(calendar.get_display_name(),event.icalendar_component["SUMMARY"],event.icalendar_component["DTSTART"].dt,event.icalendar_component.get("DUE","").dt
-                                       ,event.icalendar_component.get("PRIORITY",0))
-            eventInfo.start_time = eventInfo.start_time.astimezone(pytz.timezone(time_zone))
-            eventInfo.end_time = eventInfo.end_time.astimezone(pytz.timezone(time_zone))
-            eventInfo.status=event.icalendar_component.get("STATUS","")
-            logger.debug(f"已找到任务：{eventInfo.to_dict()}")
-            if done !='True' and done !='Done':
-                if eventInfo.status=="COMPLETED":
-                    continue
+    logger.debug( f"请求查找开始时间：{start_time}，结束时间：{end_time}的日程，时区为：{time_zone}，模式为：{done}的任务")
+    try:
+        for calendar in calendars:
+            events = calendar.date_search(start=new_start_time, end=new_end_time,compfilter="VTODO")
+            for event in events:
+                eventInfo=CalendarTodoInfo(calendar.get_display_name(),event.icalendar_component["SUMMARY"],event.icalendar_component["DTSTART"].dt,event.icalendar_component.get("DUE","").dt
+                                           ,event.icalendar_component.get("PRIORITY",0))
+                eventInfo.start_time = eventInfo.start_time.astimezone(pytz.timezone(time_zone))
+                eventInfo.end_time = eventInfo.end_time.astimezone(pytz.timezone(time_zone))
+                eventInfo.status=event.icalendar_component.get("STATUS","")
+                logger.debug(f"已找到任务：{eventInfo.to_dict()}")
+                if done !='True' and done !='Done':
+                    if eventInfo.status=="COMPLETED":
+                        continue
+                    else:
+                        events_result += eventInfo.to_LLM()
+                elif done=='Done':
+                    if eventInfo.status=="COMPLETED":
+                        events_result += eventInfo.to_LLM()
                 else:
                     events_result += eventInfo.to_LLM()
-            elif done=='Done':
-                if eventInfo.status=="COMPLETED":
-                    events_result += eventInfo.to_LLM()
-            else:
-                events_result += eventInfo.to_LLM()
+    except Exception as e:
+        logger.error(f"获取待办事项失败：{e}")
+        return "获取待办事项失败，其他异常。"
     logger.debug( f"梳理完毕，内容为：\n{events_result}")
     return events_result
 @fastMCP.tool("create_event")
@@ -75,26 +79,31 @@ async def creat_event(calendar_name:str,name:str,start_time:str,end_time:str,loc
     """
     创建日程（日期的格式是：2025-09-29T10:00:00），默认为东八区。支持修改时区
     """
+    logger.debug(f"请求查找开始时间：{start_time}，结束时间：{end_time}的日程，时区为：{time_zone}，地点为：{location}，日历名为：{calendar_name}的日程")
     principal = client.principal()
     calendars = principal.calendars()
     new_start_time=to_datetime(start_time,time_zone)
     new_end_time=to_datetime(end_time,time_zone)
     calendar=None
-    for c in calendars:
-        if re.match(f"(.*){calendar_name}(.*)",c.get_display_name()):
-            calendar=c
-            break
-    if calendar is None:
-        logger.debug(f"未找到日历：{calendar_name}")
-        return "未找到日历"
-    else:
-        event=calendar.save_event(summary=name,location=location,dtstart=new_start_time,dtend=new_end_time)
-        logger.debug(f"生成日程：{event.icalendar_component['SUMMARY']}，日历：{calendar.get_display_name()}")
-        if event!=None:
-            logger.debug( f"将日程{name}添加到日历{calendar.get_display_name()}成功")
-            return f"将日程{name}添加到日历{calendar.get_display_name()}成功"
+    try:
+        for c in calendars:
+            if re.match(f"(.*){calendar_name}(.*)",c.get_display_name()):
+                calendar=c
+                break
+        if calendar is None:
+            logger.debug(f"未找到日历：{calendar_name}")
+            return "未找到日历"
         else:
-            return "添加日程失败"
+            event=calendar.save_event(summary=name,location=location,dtstart=new_start_time,dtend=new_end_time)
+            logger.debug(f"生成日程：{event.icalendar_component['SUMMARY']}，日历：{calendar.get_display_name()}")
+            if event!=None:
+                logger.debug( f"将日程{name}添加到日历{calendar.get_display_name()}成功")
+                return f"将日程{name}添加到日历{calendar.get_display_name()}成功"
+            else:
+                return "添加日程失败"
+    except Exception as e:
+        logger.error(f"创建日程失败：{e}")
+        return "创建日程失败，其他异常。"
 # @fastMCP.tool("create_events")
 # async def creat_events(events:str,time_zone:str="Asia/Shanghai"):
 #     """
@@ -151,20 +160,15 @@ async def creat_event(calendar_name:str,name:str,start_time:str,end_time:str,loc
 
 
 @fastMCP.tool("create_todo")
-async def creat_todo(calendar_name:str,name:str,start_time:str,end_time:str,priority:int=0):
+async def creat_todo(calendar_name:str,name:str,start_time:str,end_time:str,priority:int=0,time_zone:str="Asia/Shanghai"):
     """
-    创建日程
-    :param calendar_name: 指定的日历名称（模糊查询），用户未指定时询问用户保存到哪个日历里
-    :param name: 日程名
-    :param start_time: 日程开始时间
-    :param end_time: 日程结束时间
-    :param priority: 优先级
-    :return: 完成状态
+    创建任务（日期的格式是：2025-09-29T10:00:00），默认为东八区。支持修改时区
     """
+    logger.debug(f"请求创建开始时间：{start_time}，结束时间：{end_time}的日程，时区为：{time_zone}，日历名为：{calendar_name}的任务")
     principal = client.principal()
     calendars = principal.calendars()
-    new_start_time=to_datetime(start_time)
-    new_end_time=to_datetime(end_time)
+    new_start_time=to_datetime(start_time,time_zone)
+    new_end_time=to_datetime(end_time,time_zone)
     calendar=None
     for c in calendars:
         if re.match(f"(.*){calendar_name}(.*)",c.get_display_name()):
@@ -242,12 +246,16 @@ async def list_calendars():
     获取所有日历
     :return: 日历名
     """
-    principal = client.principal()
-    calendars = principal.calendars()
-    calendar_str=""
-    for calendar in calendars:
-        calendar_str+=calendar.get_display_name()+"\n"
-    return f"找到了以下日历：\n{calendar_str}"
+    try:
+        principal = client.principal()
+        calendars = principal.calendars()
+        calendar_str=""
+        for calendar in calendars:
+            calendar_str+=calendar.get_display_name()+"\n"
+        return f"找到了以下日历：\n{calendar_str}"
+    except Exception as e:
+        logger.debug(e)
+        return "获取日历失败"
 
 if __name__ == "__main__":
     logger = logging.getLogger()
