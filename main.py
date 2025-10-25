@@ -12,10 +12,32 @@ fastMCP=FastMCP("Calendar",port=20002)
 
 client=None
 def to_datetime(strDatetime:str,time_zone,format="%Y-%m-%dT%H:%M:%S"):
+    """
+    用来将大模型发送过来的字符串类型日期添加一个时区最后转为带时区的datetime
+    :param strDatetime: 字符串类型日期
+    :param time_zone: 时区（如"Asia/Shanghai"）
+    :param format: 时间格式化字符串
+    :return: datetime类型带时区的日期
+    """
+    if strDatetime=="":
+        return None
     ori_time=datetime.strptime(strDatetime,format)
     tz=pytz.timezone(time_zone)
     tz_time=ori_time.astimezone(tz)
     return tz_time
+def to_zone_datetime(date_time:datetime,time_zone):
+    """
+    直接为datetime类型的时间赋予时区
+    :param date_time: 时间
+    :param time_zone: 时区
+    :return: 带时区的datetime
+    """
+    if type(date_time)=="datetime":
+        tz=pytz.timezone(time_zone)
+        tz_time=date_time.astimezone(tz)
+        return tz_time
+    else:
+        return date_time
 @fastMCP.tool("get_event")
 async def get_events(start_time:str,end_time:str,time_zone:str="Asia/Shanghai"):
     """
@@ -30,9 +52,9 @@ async def get_events(start_time:str,end_time:str,time_zone:str="Asia/Shanghai"):
     for calendar in calendars:
         events = calendar.date_search(start=new_start_time, end=new_end_time)
         for event in events:
-            eventInfo=CalendarEventInfo(calendar.get_display_name(),event.icalendar_component["SUMMARY"],event.icalendar_component["DTSTART"].dt,event.icalendar_component["DTEND"].dt)
-            eventInfo.start_time=eventInfo.start_time.astimezone(pytz.timezone(time_zone))
-            eventInfo.end_time = eventInfo.end_time.astimezone(pytz.timezone(time_zone))
+            start_time=to_zone_datetime(event.icalendar_component["DTSTART"].dt,time_zone)
+            end_time = to_zone_datetime(event.icalendar_component["DTEND"].dt, time_zone)
+            eventInfo=CalendarEventInfo(calendar.get_display_name(),event.icalendar_component["SUMMARY"],start_time,end_time)
             logger.debug(f"已找到日程：{eventInfo.to_dict()}")
             events_result+=eventInfo.to_LLM()
 
@@ -53,10 +75,10 @@ async def get_todo(start_time:str,end_time:str,done:str="False",time_zone:str="A
         for calendar in calendars:
             events = calendar.date_search(start=new_start_time, end=new_end_time,compfilter="VTODO")
             for event in events:
-                eventInfo=CalendarTodoInfo(calendar.get_display_name(),event.icalendar_component["SUMMARY"],event.icalendar_component["DTSTART"].dt,event.icalendar_component.get("DUE","").dt
+                start_time = to_zone_datetime(event.icalendar_component["DTSTART"].dt, time_zone)
+                end_time = to_zone_datetime(event.icalendar_component.get("DUE","").dt, time_zone)
+                eventInfo=CalendarTodoInfo(calendar.get_display_name(),event.icalendar_component["SUMMARY"],start_time,end_time
                                            ,event.icalendar_component.get("PRIORITY",0))
-                eventInfo.start_time = eventInfo.start_time.astimezone(pytz.timezone(time_zone))
-                eventInfo.end_time = eventInfo.end_time.astimezone(pytz.timezone(time_zone))
                 eventInfo.status=event.icalendar_component.get("STATUS","")
                 logger.debug(f"已找到任务：{eventInfo.to_dict()}")
                 if done !='True' and done !='Done':
