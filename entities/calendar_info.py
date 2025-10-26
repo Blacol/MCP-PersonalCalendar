@@ -13,23 +13,25 @@ class CalendarEventInfo:
     返回值:
         CalendarEventInfo实例对象
     """
-    def __init__(self,calendar_name:str,name:str,start_time:datetime,end_time:datetime):
+    def __init__(self,calendar_name:str,name:str,start_time:datetime,end_time:datetime,location:str=""):
         self.name=name
         self.start_time=start_time
         self.end_time=end_time
         self.calendar_name=calendar_name
+        self.location=location
     def to_dict(self):
         return {
             "calendar":self.calendar_name,
             "name":self.name,
             "start_time":self.start_time,
-            "end_time":self.end_time
+            "end_time":self.end_time,
+            "location":self.location
         }
     @staticmethod
     def from_dic(dic):
-        return CalendarEventInfo(dic["calendar_name"],dic["name"],dic["start_time"],dic["end_time"])
+        return CalendarEventInfo(dic["calendar_name"],dic["name"],dic["start_time"],dic["end_time"],dic["location"])
     def to_LLM(self)->str:
-        return f"日历：{self.calendar_name}，日程：{self.name}\n时间：{self.start_time}~{self.end_time}\n"
+        return f"日历：{self.calendar_name}，日程：{self.name}\n时间：{self.start_time}~{self.end_time}\n地点：{self.location}"
 class CalendarTodoInfo:
     """
     日历待办信息类
