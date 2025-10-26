@@ -38,10 +38,10 @@ def to_zone_datetime(date_time:datetime,time_zone):
         return tz_time
     else:
         return date_time
-@fastMCP.tool("get_event")
+@fastMCP.tool("get_events")
 async def get_events(start_time:str,end_time:str,time_zone:str="Asia/Shanghai"):
     """
-    获取指定日期的日程（日期的格式是：2025-09-29T10:00:00），默认为东八区。支持修改时区
+    获取指定日期的日程（日期的格式是：2025-09-29T10:00:00），默认为东八区。支持修改时区。返回""表示没有日程。
     """
     logger.debug(f"请求查找开始时间：{start_time}，结束时间：{end_time}的日程，时区是：{time_zone}的日程")
     principal=client.principal()
@@ -60,10 +60,11 @@ async def get_events(start_time:str,end_time:str,time_zone:str="Asia/Shanghai"):
 
     logger.debug( f"梳理完毕，内容为：\n{events_result}")
     return events_result
-@fastMCP.tool("get_todo")
-async def get_todo(start_time:str,end_time:str,done:str="False",time_zone:str="Asia/Shanghai"):
+@fastMCP.tool("get_todos")
+async def get_todo(start_time:str,end_time:str,done:str="NOT",time_zone:str="Asia/Shanghai"):
     """
-    获取指定日期的待办事项（日期的格式是：2025-09-29T10:00:00），默认为东八区。支持修改时区
+    获取指定日期的待办事项（日期的格式是：2025-09-29T10:00:00），默认为东八区。支持修改时区。返回""表示没有待办事项。
+    done参数如果为NOT，则只查找未完成的任务，如果为DONE则只查找已完成的任务，如果为ALL则查找所有任务。
     """
     principal=client.principal()
     calendars=principal.calendars()
@@ -76,24 +77,33 @@ async def get_todo(start_time:str,end_time:str,done:str="False",time_zone:str="A
             events = calendar.date_search(start=new_start_time, end=new_end_time,compfilter="VTODO")
             for event in events:
                 start_time = to_zone_datetime(event.icalendar_component["DTSTART"].dt, time_zone)
-                end_time = to_zone_datetime(event.icalendar_component.get("DUE","").dt, time_zone)
+                et=event.icalendar_component.get("DUE","")
+                if et=="":
+                    end_time=None
+                else:
+                    end_time = to_zone_datetime(et.dt, time_zone)
                 eventInfo=CalendarTodoInfo(calendar.get_display_name(),event.icalendar_component["SUMMARY"],start_time,end_time
                                            ,event.icalendar_component.get("PRIORITY",0))
-                eventInfo.status=event.icalendar_component.get("STATUS","")
+                eventInfo.status=event.icalendar_instance.subcomponents[-1].get("STATUS","") if event.icalendar_component.get("STATUS","")=="" else event.icalendar_component.get("STATUS","")
                 logger.debug(f"已找到任务：{eventInfo.to_dict()}")
-                if done !='True' and done !='Done':
+                if done=='DONE':
+                    if eventInfo.status=="COMPLETED":
+                        events_result += eventInfo.to_LLM()
+                    else:
+                        continue
+                elif done=='NOT':
                     if eventInfo.status=="COMPLETED":
                         continue
                     else:
                         events_result += eventInfo.to_LLM()
-                elif done=='Done':
-                    if eventInfo.status=="COMPLETED":
-                        events_result += eventInfo.to_LLM()
-                else:
+                elif done=='ALL':
                     events_result += eventInfo.to_LLM()
+                else:
+                    logger.error(f"参数done错误，传入：{done}，应为：DONE|NOT|ALL")
+                    break
     except Exception as e:
         logger.error(f"获取待办事项失败：{e}")
-        return "获取待办事项失败，其他异常。"
+        return f"获取待办事项失败，其他异常。{e}"
     logger.debug( f"梳理完毕，内容为：\n{events_result}")
     return events_result
 @fastMCP.tool("create_event")
