@@ -22,7 +22,7 @@ def to_datetime(strDatetime:str,time_zone,format="%Y-%m-%dT%H:%M:%S"):
         return None
     ori_time=datetime.strptime(strDatetime,format)
     tz=pytz.timezone(time_zone)
-    tz_time=ori_time.astimezone(tz)
+    tz_time=tz.localize(ori_time)
     return tz_time
 def to_zone_datetime(date_time:datetime,time_zone):
     """
@@ -33,7 +33,7 @@ def to_zone_datetime(date_time:datetime,time_zone):
     """
     if type(date_time)=="datetime":
         tz=pytz.timezone(time_zone)
-        tz_time=date_time.astimezone(tz)
+        tz_time=tz.localize(date_time)
         return tz_time
     else:
         return date_time
