@@ -41,7 +41,7 @@ class CalendarTodoInfo:
         end_time(str)：结束时间
         calendar_name(str)：所属日历的名字
         status(str)：任务状态
-        priority(int)=0：优先级
+        priority(int)=0：优先级，值越高优先级越低
     """
     def __init__(self,calendar_name:str,name:str,start_time:datetime,end_time:datetime,priority:int=0):
         self.name=name
