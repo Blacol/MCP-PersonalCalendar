@@ -15,7 +15,7 @@ client=None
 @fastMCP.tool("get_events")
 async def get_events(start_time:str,end_time:str,time_zone:str="Asia/Shanghai"):
     """
-    获取指定日期的日程（日期的格式是：2025-09-29T10:00:00），默认为东八区。支持修改时区。返回""表示没有日程。
+    获取指定日期的日程（日期的格式是：2025-09-29T10:00），默认为东八区。支持修改时区。返回""表示没有日程。
     """
     logger.debug(f"请求查找开始时间：{start_time}，结束时间：{end_time}的日程，时区是：{time_zone}的日程")
     principal=client.principal()
@@ -37,7 +37,7 @@ async def get_events(start_time:str,end_time:str,time_zone:str="Asia/Shanghai"):
 @fastMCP.tool("get_todos")
 async def get_todo(start_time:str,end_time:str,done:str="NOT",time_zone:str="Asia/Shanghai"):
     """
-    获取指定日期的待办事项（日期的格式是：2025-09-29T10:00:00），默认为东八区。支持修改时区。返回""表示没有待办事项。
+    获取指定日期的待办事项（日期的格式是：2025-09-29T10:00），默认为东八区。支持修改时区。返回""表示没有待办事项。
     done参数如果为NOT，则只查找未完成的任务，如果为DONE则只查找已完成的任务，如果为ALL则查找所有任务。
     """
     principal=client.principal()
