@@ -11,6 +11,7 @@ from utils.functions import *
 fastMCP=FastMCP("Calendar",port=20002)
 
 client=None
+logger = logging.getLogger()
 @fastMCP.prompt("create_todos",description="创建待办事项")
 def prompt_create_todos(calendar_name:str, names:str, start_times:str, end_times:str, locations:str, priority:str,time_zones:str)->Message:
     """
@@ -291,7 +292,7 @@ async def list_calendars():
         return "获取日历失败"
 
 if __name__ == "__main__":
-    logger = logging.getLogger()
+
     logger.setLevel(logging.ERROR)
     fileHandler = logging.FileHandler("./log/log-" + datetime.strftime(datetime.now(), "%Y-%m-%d_%H-%M-%S") + ".log",encoding="utf-8")
     fileHandler.setLevel(logging.ERROR)

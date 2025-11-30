@@ -8,6 +8,8 @@ import pytz
 from multipledispatch import dispatch
 
 from entities.exceptions import TimeZoneInfoError, ItemNumberException
+from main import logger
+
 
 @dispatch(str,str)
 def to_zone_datetime(strDatetime:str,time_zone:str,format="%Y-%m-%dT%H:%M"):
@@ -76,35 +78,39 @@ def time_zone_splits(time_zones:Dict,data:List[str]|List[None])->List[datetime]:
     :param data: 数据列表
     :return: 分类后的字典，键为时区，值为对应数据列表
     """
-    if not data:
-        return []
-    if None in data:
-        return []
-    new_times=[]
-    if "all" in time_zones.keys():
-        for d in data:
-            time_zone_time=to_zone_datetime(d, time_zones["all"])
-            new_times.append(time_zone_time)
-        return new_times
-    elif "other" in time_zones.keys():
-        other_time_zone=time_zones["other"]
-        del time_zones["other"]
-        special_time_zone=list(time_zones.keys())
-        for i,v in enumerate(data):
-            if i in special_time_zone:
-                time_zone_time=to_zone_datetime(v, time_zones[str(special_time_zone[i])])
+    try:
+        if not data:
+            return []
+        if None in data:
+            return []
+        new_times=[]
+        if "all" in time_zones.keys():
+            for d in data:
+                time_zone_time=to_zone_datetime(d, time_zones["all"])
                 new_times.append(time_zone_time)
-            else:
-                time_zone_time=to_zone_datetime(v, other_time_zone)
-                new_times.append(time_zone_time)
-        return new_times
-    else:
-        special_time_zone = list(time_zones.keys())
-        for i, v in enumerate(data):
-            if i in special_time_zone:
-                time_zone_time = to_zone_datetime(v, time_zones[str(special_time_zone[i])])
-                new_times.append(time_zone_time)
-        return new_times
+            return new_times
+        elif "other" in time_zones.keys():
+            other_time_zone=time_zones["other"]
+            del time_zones["other"]
+            special_time_zone=list(time_zones.keys())
+            for i,v in enumerate(data):
+                if i in special_time_zone:
+                    time_zone_time=to_zone_datetime(v, time_zones[str(special_time_zone[i])])
+                    new_times.append(time_zone_time)
+                else:
+                    time_zone_time=to_zone_datetime(v, other_time_zone)
+                    new_times.append(time_zone_time)
+            return new_times
+        else:
+            special_time_zone = list(time_zones.keys())
+            for i, v in enumerate(data):
+                if i in special_time_zone:
+                    time_zone_time = to_zone_datetime(v, time_zones[str(special_time_zone[i])])
+                    new_times.append(time_zone_time)
+            return new_times
+    except Exception as e:
+        logger.error(e)
+        raise e
 def time_zone_splits_text(time_zones:Dict,data:List[str]|List[None])->List[str]:
     """
     将数据根据时区分类，返回字符串类型
@@ -112,34 +118,39 @@ def time_zone_splits_text(time_zones:Dict,data:List[str]|List[None])->List[str]:
     :param data: 数据列表
     :return: 分类后的字典，键为时区，值为对应数据列表
     """
-    if not data:
+    try:
+        if not data:
+            return []
+        if None in data:
+            return []
+        new_times=[]
+        if "all" in time_zones.keys():
+            for d in data:
+                time_zone_time=to_zone_datetime(d, time_zones["all"])
+                new_times.append(time_zone_time)
+            return new_times
+        elif "other" in time_zones.keys():
+            other_time_zone=time_zones["other"]
+            del time_zones["other"]
+            special_time_zone=list(time_zones.keys())
+            for i,v in enumerate(data):
+                if i in special_time_zone:
+                    time_zone=time_zones[str(special_time_zone[i])]
+                    time_zone_time=to_zone_datetime(v, time_zone)
+                    new_times.append(time_zone_time.strftime("%Y-%m-%dT%H:%M")+f"({time_zone})")
+                else:
+                    time_zone_time=to_zone_datetime(v, other_time_zone)
+                    new_times.append(time_zone_time.strftime("%Y-%m-%dT%H:%M")+f"({other_time_zone})")
+            return new_times
+        else:
+            special_time_zone = list(time_zones.keys())
+            for i, v in enumerate(data):
+                if i in special_time_zone:
+                    time_zone=time_zones[str(special_time_zone[i])]
+                    time_zone_time = to_zone_datetime(v, time_zone)
+                    new_times.append(time_zone_time.strftime("%Y-%m-%dT%H:%M")+f"({time_zone})")
+            return new_times
+    except Exception as e:
+        logger.error(e)
+        raise e
         return []
-    if None in data:
-        return []
-    new_times=[]
-    if "all" in time_zones.keys():
-        for d in data:
-            time_zone_time=to_zone_datetime(d, time_zones["all"])
-            new_times.append(time_zone_time)
-        return new_times
-    elif "other" in time_zones.keys():
-        other_time_zone=time_zones["other"]
-        del time_zones["other"]
-        special_time_zone=list(time_zones.keys())
-        for i,v in enumerate(data):
-            if i in special_time_zone:
-                time_zone=time_zones[str(special_time_zone[i])]
-                time_zone_time=to_zone_datetime(v, time_zone)
-                new_times.append(time_zone_time.strftime("%Y-%m-%dT%H:%M")+f"({time_zone})")
-            else:
-                time_zone_time=to_zone_datetime(v, other_time_zone)
-                new_times.append(time_zone_time.strftime("%Y-%m-%dT%H:%M")+f"({other_time_zone})")
-        return new_times
-    else:
-        special_time_zone = list(time_zones.keys())
-        for i, v in enumerate(data):
-            if i in special_time_zone:
-                time_zone=time_zones[str(special_time_zone[i])]
-                time_zone_time = to_zone_datetime(v, time_zone)
-                new_times.append(time_zone_time.strftime("%Y-%m-%dT%H:%M")+f"({time_zone})")
-        return new_times
