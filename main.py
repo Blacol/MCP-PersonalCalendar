@@ -93,8 +93,8 @@ async def get_events(start_time:str,end_time:str,time_zone:str="Asia/Shanghai"):
     principal=client.principal()
     calendars=principal.calendars()
     events_result=""""""
-    new_start_time=to_datetime(start_time,time_zone)
-    new_end_time=to_datetime(end_time,time_zone)
+    new_start_time=to_zone_datetime(start_time,time_zone)
+    new_end_time=to_zone_datetime(end_time,time_zone)
     for calendar in calendars:
         events = calendar.date_search(start=new_start_time, end=new_end_time)
         for event in events:
@@ -115,8 +115,8 @@ async def get_todo(start_time:str,end_time:str,done:str="NOT",time_zone:str="Asi
     principal=client.principal()
     calendars=principal.calendars()
     events_result=""""""
-    new_start_time=to_datetime(start_time,time_zone)
-    new_end_time=to_datetime(end_time,time_zone)
+    new_start_time=to_zone_datetime(start_time,time_zone)
+    new_end_time=to_zone_datetime(end_time,time_zone)
     logger.debug( f"请求查找开始时间：{start_time}，结束时间：{end_time}的日程，时区为：{time_zone}，模式为：{done}的任务")
     try:
         for calendar in calendars:
