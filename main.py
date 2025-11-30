@@ -11,7 +11,7 @@ from utils.functions import *
 fastMCP=FastMCP("Calendar",port=20002)
 
 client=None
-logger = logging.getLogger()
+
 @fastMCP.prompt("create_todos",description="创建待办事项")
 def prompt_create_todos(calendar_name:str, names:str, start_times:str, end_times:str, locations:str, priority:str,time_zones:str)->Message:
     """
@@ -81,8 +81,8 @@ async def get_current_time(time_zone:str="Asia/Shanghai"):
     """
     获取当前时间，默认为东八区。支持修改时区。
     """
-    current_time=to_zone_datetime(datetime.now(),time_zone)
-    return current_time.strftime("%Y-%m-%dT%H:%M:%S")
+    current_time=datetime_to_zone_datetime(datetime.now(),time_zone)
+    return current_time.strftime("%Y-%m-%dT%H:%M")
 
 @fastMCP.tool("get_events")
 async def get_events(start_time:str,end_time:str,time_zone:str="Asia/Shanghai"):
@@ -98,9 +98,9 @@ async def get_events(start_time:str,end_time:str,time_zone:str="Asia/Shanghai"):
     for calendar in calendars:
         events = calendar.date_search(start=new_start_time, end=new_end_time)
         for event in events:
-            start_time=to_zone_datetime(event.icalendar_component["DTSTART"].dt,time_zone)
-            end_time = to_zone_datetime(event.icalendar_component["DTEND"].dt, time_zone)
-            eventInfo=CalendarEventInfo(calendar.get_display_name(),event.icalendar_component["SUMMARY"],start_time,end_time)
+            st=event.icalendar_component["DTSTART"].dt
+            et=event.icalendar_component["DTEND"].dt
+            eventInfo=CalendarEventInfo(calendar.get_display_name(),event.icalendar_component["SUMMARY"],st,et)
             logger.debug(f"已找到日程：{eventInfo.to_dict()}")
             events_result+=eventInfo.to_LLM()
 
@@ -116,7 +116,7 @@ async def get_todo(start_time:str,end_time:str,done:str="NOT",time_zone:str="Asi
     calendars=principal.calendars()
     events_result=""""""
     new_start_time=to_zone_datetime(start_time,time_zone)
-    new_end_time=to_zone_datetime(end_time,time_zone)
+    new_end_time=to_zone_datetime(start_time,time_zone)
     logger.debug( f"请求查找开始时间：{start_time}，结束时间：{end_time}的待办，时区为：{time_zone}，模式为：{done}的任务")
     try:
         for calendar in calendars:
@@ -124,17 +124,17 @@ async def get_todo(start_time:str,end_time:str,done:str="NOT",time_zone:str="Asi
             for event in events:
                 st=event.icalendar_component.get("DTSTART","")
                 if st=="":
-                    start_time=None
+                    st=None
                 else:
-                    start_time = to_zone_datetime(event.icalendar_component["DTSTART"].dt, time_zone)
+                    st = st.dt
                 et=event.icalendar_component.get("DUE","")
                 if et=="":
-                    end_time=None
+                    et=None
                 else:
-                    end_time = to_zone_datetime(et.dt, time_zone)
-                eventInfo=CalendarTodoInfo(calendar.get_display_name(),event.icalendar_component["SUMMARY"],start_time,end_time
+                    et = et.dt
+                eventInfo=CalendarTodoInfo(calendar.get_display_name(),event.icalendar_component["SUMMARY"],st,et
                                            ,event.icalendar_component.get("PRIORITY",0))
-                eventInfo.status=event.icalendar_instance.subcomponents[-1].get("STATUS","") if event.icalendar_component.get("STATUS","")=="" else event.icalendar_component.get("STATUS","")
+                eventInfo.status=event.icalendar_instance.subcomponents[-1].get("STATUS","未开始") if event.icalendar_component.get("STATUS","")=="" else event.icalendar_component.get("STATUS","")
                 logger.debug(f"已找到任务：{eventInfo.to_dict()}")
                 if done=='DONE':
                     if eventInfo.status=="COMPLETED":
@@ -337,10 +337,10 @@ async def list_calendars():
         return "获取日历失败"
 
 if __name__ == "__main__":
-
-    logger.setLevel(logging.ERROR)
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.DEBUG)
     fileHandler = logging.FileHandler("./log/log-" + datetime.strftime(datetime.now(), "%Y-%m-%d_%H-%M-%S") + ".log",encoding="utf-8")
-    fileHandler.setLevel(logging.ERROR)
+    fileHandler.setLevel(logging.DEBUG)
     formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     fileHandler.setFormatter(formatter)
     logger.addHandler(fileHandler)

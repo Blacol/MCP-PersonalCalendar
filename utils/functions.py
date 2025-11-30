@@ -8,10 +8,6 @@ import pytz
 from multipledispatch import dispatch
 
 from entities.exceptions import TimeZoneInfoError, ItemNumberException
-from main import logger
-
-
-@dispatch(str,str)
 def to_zone_datetime(strDatetime:str,time_zone:str,format="%Y-%m-%dT%H:%M"):
     """
     用来将大模型发送过来的字符串类型日期添加一个时区最后转为带时区的datetime
@@ -26,8 +22,8 @@ def to_zone_datetime(strDatetime:str,time_zone:str,format="%Y-%m-%dT%H:%M"):
     tz=pytz.timezone(time_zone)
     tz_time=tz.localize(ori_time)
     return tz_time
-@dispatch(datetime,str)
-def to_zone_datetime(date_time,time_zone):
+
+def datetime_to_zone_datetime(date_time,time_zone):
     """
     直接为datetime类型的时间赋予时区
     :param date_time: 时间
@@ -109,7 +105,6 @@ def time_zone_splits(time_zones:Dict,data:List[str]|List[None])->List[datetime]:
                     new_times.append(time_zone_time)
             return new_times
     except Exception as e:
-        logger.error(e)
         raise e
 def time_zone_splits_text(time_zones:Dict,data:List[str]|List[None])->List[str]:
     """
@@ -151,6 +146,5 @@ def time_zone_splits_text(time_zones:Dict,data:List[str]|List[None])->List[str]:
                     new_times.append(time_zone_time.strftime("%Y-%m-%dT%H:%M")+f"({time_zone})")
             return new_times
     except Exception as e:
-        logger.error(e)
         raise e
         return []
