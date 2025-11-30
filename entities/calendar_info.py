@@ -1,4 +1,6 @@
 from datetime import datetime
+from idlelib.debugobj import dispatch
+
 
 class CalendarEventInfo:
     """
@@ -43,13 +45,14 @@ class CalendarTodoInfo:
         status(str)：任务状态
         priority(int)=0：优先级，值越高优先级越低
     """
-    def __init__(self,calendar_name:str,name:str,start_time:datetime,end_time:datetime,priority:int=0):
+    def __init__(self,calendar_name:str,name:str,start_time:datetime|None,end_time:datetime|None,priority:int=0):
         self.name=name
         self.start_time=start_time
         self.end_time=end_time
         self.calendar_name=calendar_name
         self.status=""
         self.priority=priority
+
     def to_dict(self):
         return {
             "calendar":self.calendar_name,

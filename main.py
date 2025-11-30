@@ -3,14 +3,85 @@ import logging
 
 from mcp.server.fastmcp import FastMCP
 from caldav.davclient import get_davclient
+from mcp.server.fastmcp.prompts.base import Message
+
 from entities.calendar_info import CalendarEventInfo, CalendarTodoInfo
 from utils.functions import *
 
 fastMCP=FastMCP("Calendar",port=20002)
 
 client=None
+@fastMCP.prompt("create_todos",description="创建待办事项")
+def prompt_create_todos(calendar_name:str, names:str, start_times:str, end_times:str, locations:str, priority:str,time_zones:str)->Message:
+    """
+        创建待办事项提示词
 
+        Args:
+            calendar_name (str): 日历名称，指定要添加待办事项的日历
+            names (str): 待办事项名称列表，JSON字符串格式，例如: '["任务1", "任务2"]'
+            start_times (str): 开始时间列表，JSON字符串格式，例如: '["2025-01-01T09:00", "2025-01-02T10:00"]'
+            end_times (str): 结束时间列表，JSON字符串格式，例如: '["2025-01-01T10:00", "2025-01-02T11:00"]'
+            locations (str): 地点列表，JSON字符串格式，例如: '["办公室", "家里"]'
+            priority (str): 优先级列表，JSON字符串格式，例如: '[1, 2]'，数字越大优先级越高
+            time_zones (str): 时区列表，JSON字符串格式，例如: '["Asia/Shanghai", "Asia/Tokyo"]'
+    """
+    names=json.loads(names)
+    start_times=json.loads(start_times)
+    end_times=json.loads(end_times)
+    locations=json.loads(locations)
+    priority=json.loads(priority)
+    time_zones=json.loads(time_zones)
+    msg=f"向{calendar_name}添加待办事项："
+    zoned_start_times=time_zone_splits_text(time_zones,start_times)
+    zoned_end_times=time_zone_splits_text(time_zones,end_times)
+    for i in range(len(names)):
+        msg+=f"{names[i]}，"
+        if zoned_start_times is not []:
+            msg+=f"开始时间：{zoned_start_times[i]}"
+        else:
+            msg+=f"没有开始时间"
+        if zoned_end_times is not []:
+            msg += f"，结束时间：{zoned_end_times[i]}"
+        else:
+            msg+=f"，没有结束时间"
+        if locations:
+            msg+=f"\n地点：{locations[i]}"
+        if priority:
+            msg+=f"\n优先级：{priority[i]}"
+        msg+="\n"
+    return Message(msg,role="user")
+@fastMCP.prompt("create_events",description="创建日程")
+def prompt_create_events(calendar_name:str, names:str, start_times:str, end_times:str, locations:str, time_zones:str)->Message:
+    names=json.loads(names)
+    start_times=json.loads(start_times)
+    end_times=json.loads(end_times)
+    locations=json.loads(locations)
+    time_zones=json.loads(time_zones)
+    msg=f"向{calendar_name}添加日程："
+    zoned_start_times=time_zone_splits_text(time_zones,start_times)
+    zoned_end_times=time_zone_splits_text(time_zones,end_times)
+    for i in range(len(names)):
+        msg+=f"{names[i]}，"
+        if zoned_start_times is not []:
+            msg+=f"开始时间：{zoned_start_times[i]}"
+        else:
+            msg+=f"没有开始时间"
+        if zoned_end_times is not []:
+            msg += f"，结束时间：{zoned_end_times[i]}"
+        else:
+            msg+=f"，没有结束时间"
+        if locations:
+            msg+=f"\n地点：{locations[i]}"
+        msg+="\n"
+    return Message(msg,role="user")
 
+@fastMCP.tool("get_current_time")
+async def get_current_time(time_zone:str="Asia/Shanghai"):
+    """
+    获取当前时间，默认为东八区。支持修改时区。
+    """
+    current_time=to_zone_datetime(datetime.now(),time_zone)
+    return current_time.strftime("%Y-%m-%dT%H:%M:%S")
 
 @fastMCP.tool("get_events")
 async def get_events(start_time:str,end_time:str,time_zone:str="Asia/Shanghai"):
@@ -81,7 +152,7 @@ async def get_todo(start_time:str,end_time:str,done:str="NOT",time_zone:str="Asi
     logger.debug( f"梳理完毕，内容为：\n{events_result}")
     return events_result
 @fastMCP.tool("create_events")
-def create_events(calendar_name:str, names:List[str], start_times:List[str], end_times:List[str], locations:List[str]=None, time_zones:Dict={'all':"Asia/Shanghai"}):
+def create_events(calendar_name:str, names:List[str], start_times:List[str], end_times:List[str], locations:List[str]=[], time_zones:Dict={'all':"Asia/Shanghai"}):
     """
     创建多个日程（日期的格式是：2025-09-29T10:00），默认为东八区。支持修改时区
     calendar_name:日历名。如果用户没有提及，询问用户，不要自己利用list_calendars工具进行查询。除非用户准许。
@@ -100,50 +171,20 @@ def create_events(calendar_name:str, names:List[str], start_times:List[str], end
     }
     """
     time_zone_check(time_zones,names)
-    data_check(names,start_times,end_times,locations)
+    data_check(names,start_times,end_times)
     principal=client.principal()
     calendars=principal.calendars()
     calendar=find_calendar(calendars,calendar_name)
     calendar_info_list=[]
     success_info="成功："
     fail_info="失败："
+    if not locations:
+        locations=[""]*len(names)
     if calendar!=None:
-        # 处理所有日程时区一致的情况
-        if "all" in time_zones:
-            for name,start_time,end_time,location in zip(names,start_times,end_times,locations):
-                new_start_time=to_datetime(start_time,time_zones["all"])
-                new_end_time=to_datetime(end_time,time_zones["all"])
-                calendar_info=CalendarEventInfo(calendar.get_display_name(),name,new_start_time,new_end_time,location)
-                calendar_info_list.append(calendar_info)
-        # 处理部分一致情况
-        elif "other" in time_zones:
-            other_time_zone=time_zones["other"]
-            del time_zones["other"]
-            index=[int(i) for i in time_zones]
-            for i,v in enumerate(zip(names,start_times,end_times,locations)):
-                if i in index:
-                    ii=index.index(i)
-                    new_start_time=to_datetime(v[1],time_zones[str(i)])
-                    new_end_time=to_datetime(v[2],time_zones[str(i)])
-                    calendar_info=CalendarEventInfo(calendar.get_display_name(),v[0],new_start_time,new_end_time,v[3])
-                    index.remove(i)
-                else:
-                    new_start_time=to_datetime(v[1],other_time_zone)
-                    new_end_time=to_datetime(v[2],other_time_zone)
-                    calendar_info=CalendarEventInfo(calendar.get_display_name(),v[0],new_start_time,new_end_time,v[3])
-                calendar_info_list.append(calendar_info)
-        # 处理所有日程时区全不一致的情况
-        else:
-            index = [int(i) for i in time_zones]
-            for i, v in enumerate(zip(names, start_times, end_times, locations)):
-                if i in index:
-                    ii = index.index(i)
-                    new_start_time = to_datetime(v[1], time_zones[str(i)])
-                    new_end_time = to_datetime(v[2], time_zones[str(i)])
-                    calendar_info = CalendarEventInfo(calendar.get_display_name(), v[0], new_start_time, new_end_time,
-                                                      v[3])
-                    index.remove(i)
-                calendar_info_list.append(calendar_info)
+        zoned_start_times=time_zone_splits(time_zones,start_times)
+        zoned_end_times=time_zone_splits(time_zones,end_times)
+        for i in range(len(names)):
+            calendar_info_list.append(CalendarEventInfo(calendar_name,names[i],zoned_start_times[i],zoned_end_times[i],locations[i]))
         # 开始写入日历
         for calendar_info in calendar_info_list:
             try:
@@ -163,7 +204,7 @@ def create_events(calendar_name:str, names:List[str], start_times:List[str], end
 
 
 @fastMCP.tool("create_todos")
-async def creat_todos(calendar_name:str, names:List[str], start_times:List[str], end_times:List[str],priority:List[int],time_zones:Dict[str,str]={"all":"Asia/Shanghai"}):
+async def creat_todos(calendar_name:str, names:List[str], start_times:List[str]=[], end_times:List[str]=[],priority:List[int]=[],time_zones:Dict[str,str]={"all":"Asia/Shanghai"}):
     """
     创建多个任务（日期的格式是：2025-09-29T10:00），默认为东八区。支持修改时区
     calendar_name:日历名。如果用户没有提及，询问用户，不要自己利用list_calendars工具进行查询。除非用户准许。
@@ -181,7 +222,17 @@ async def creat_todos(calendar_name:str, names:List[str], start_times:List[str],
     }
     """
     time_zone_check(time_zones, names)
-    data_check(names, start_times, end_times,priority)
+    if priority==[]:
+        priority=[0]*len(names)
+    if start_times==[]:
+        start_times=[None]*len(names)
+    if end_times==[]:
+        end_times=[None]*len(names)
+    if start_times!=[] and end_times!=[]:
+        data_check(names, start_times, end_times)
+    elif start_times!=[] or end_times!=[]:
+        data_check(names,start_times if start_times!=[] else end_times)
+
     principal = client.principal()
     calendars = principal.calendars()
     calendar = find_calendar(calendars, calendar_name)
@@ -190,42 +241,21 @@ async def creat_todos(calendar_name:str, names:List[str], start_times:List[str],
     fail_info = "失败："
     if calendar != None:
         # 处理所有日程时区一致的情况
-        if "all" in time_zones:
-            for name, start_time, end_time, priority in zip(names, start_times, end_times, priority):
-                new_start_time = to_datetime(start_time, time_zones["all"])
-                new_end_time = to_datetime(end_time, time_zones["all"])
-                calendar_info = CalendarTodoInfo(calendar.get_display_name(), name, new_start_time, new_end_time,
-                                                  priority)
-                calendar_info_list.append(calendar_info)
-        # 处理部分一致情况
-        elif "other" in time_zones:
-            other_time_zone = time_zones["other"]
-            del time_zones["other"]
-            index = [int(i) for i in time_zones]
-            for i, v in enumerate(zip(names, start_times, end_times, priority)):
-                if i in index:
-                    new_start_time = to_datetime(v[1], time_zones[str(i)])
-                    new_end_time = to_datetime(v[2], time_zones[str(i)])
-                    calendar_info = CalendarTodoInfo(calendar.get_display_name(), v[0], new_start_time, new_end_time,
-                                                      v[3])
-                    index.remove(i)
-                else:
-                    new_start_time = to_datetime(v[1], other_time_zone)
-                    new_end_time = to_datetime(v[2], other_time_zone)
-                    calendar_info = CalendarTodoInfo(calendar.get_display_name(), v[0], new_start_time, new_end_time,
-                                                      v[3])
-                calendar_info_list.append(calendar_info)
-        # 处理所有日程时区全不一致的情况
-        else:
-            index = [int(i) for i in time_zones]
-            for i, v in enumerate(zip(names, start_times, end_times, priority)):
-                if i in index:
-                    new_start_time = to_datetime(v[1], time_zones[str(i)])
-                    new_end_time = to_datetime(v[2], time_zones[str(i)])
-                    calendar_info = CalendarTodoInfo(calendar.get_display_name(), v[0], new_start_time, new_end_time,
-                                                      v[3])
-                    index.remove(i)
-                calendar_info_list.append(calendar_info)
+        new_start_time = None
+        new_end_time = None
+        
+        zoned_start_times = time_zone_splits(time_zones, start_times)
+        zoned_end_times = time_zone_splits(time_zones, end_times)
+        for i in range(len(names)):
+            if None not in start_times and None not in end_times!=[]:
+                calendar_info_list.append(
+                    CalendarTodoInfo(calendar_name,names[i], zoned_start_times[i], zoned_end_times[i], priority[i]))
+            else:
+                calendar_info_list.append(CalendarTodoInfo(calendar_name,names[i],
+                                                           zoned_start_times[i] if zoned_start_times!=[] else None,
+                                                           zoned_end_times[i] if zoned_end_times!=[] else None,
+                                                           priority[i]))
+
         # 开始写入日历
         for calendar_info in calendar_info_list:
             try:
@@ -262,9 +292,9 @@ async def list_calendars():
 
 if __name__ == "__main__":
     logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.ERROR)
     fileHandler = logging.FileHandler("./log/log-" + datetime.strftime(datetime.now(), "%Y-%m-%d_%H-%M-%S") + ".log",encoding="utf-8")
-    fileHandler.setLevel(logging.DEBUG)
+    fileHandler.setLevel(logging.ERROR)
     formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     fileHandler.setFormatter(formatter)
     logger.addHandler(fileHandler)
