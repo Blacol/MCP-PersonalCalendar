@@ -117,7 +117,7 @@ async def get_todo(start_time:str,end_time:str,done:str="NOT",time_zone:str="Asi
     events_result=""""""
     new_start_time=to_zone_datetime(start_time,time_zone)
     new_end_time=to_zone_datetime(end_time,time_zone)
-    logger.debug( f"请求查找开始时间：{start_time}，结束时间：{end_time}的日程，时区为：{time_zone}，模式为：{done}的任务")
+    logger.debug( f"请求查找开始时间：{start_time}，结束时间：{end_time}的待办，时区为：{time_zone}，模式为：{done}的任务")
     try:
         for calendar in calendars:
             events = calendar.date_search(start=new_start_time, end=new_end_time,compfilter="VTODO")
@@ -155,6 +155,47 @@ async def get_todo(start_time:str,end_time:str,done:str="NOT",time_zone:str="Asi
         logger.error(f"获取待办事项失败：{e}")
         return f"获取待办事项失败，其他异常。{e}"
     logger.debug( f"梳理完毕，内容为：\n{events_result}")
+    return events_result
+@fastMCP.tool("get_no_time_todos")
+async def get_no_time_todos(done:str="NOT",time_zone:str="Asia/Shanghai"):
+    """
+        获取无开始时间的任务
+        done参数如果为NOT，则只查找未完成的任务，如果为DONE则只查找已完成的任务，如果为ALL则查找所有任务。
+    """
+    principal = client.principal()
+    calendars = principal.calendars()
+    events_result = """"""
+    logger.debug(f"请求查找无开始时间的待办，时区为：{time_zone}，模式为：{done}的任务")
+    try:
+        for calendar in calendars:
+            events = calendar.date_search(start=None, compfilter="VTODO")
+            for event in events:
+                eventInfo = CalendarTodoInfo(calendar.get_display_name(), event.icalendar_component["SUMMARY"],
+                                             None, None
+                                             , event.icalendar_component.get("PRIORITY", 0))
+                eventInfo.status = event.icalendar_instance.subcomponents[-1].get("STATUS",
+                                                                                  "") if event.icalendar_component.get(
+                    "STATUS", "") == "" else event.icalendar_component.get("STATUS", "")
+                logger.debug(f"已找到任务：{eventInfo.to_dict()}")
+                if done == 'DONE':
+                    if eventInfo.status == "COMPLETED":
+                        events_result += eventInfo.to_LLM()
+                    else:
+                        continue
+                elif done == 'NOT':
+                    if eventInfo.status == "COMPLETED":
+                        continue
+                    else:
+                        events_result += eventInfo.to_LLM()
+                elif done == 'ALL':
+                    events_result += eventInfo.to_LLM()
+                else:
+                    logger.error(f"参数done错误，传入：{done}，应为：DONE|NOT|ALL")
+                    break
+    except Exception as e:
+        logger.error(f"获取待办事项失败：{e}")
+        return f"获取待办事项失败，其他异常。{e}"
+    logger.debug(f"梳理完毕，内容为：\n{events_result}")
     return events_result
 @fastMCP.tool("create_events")
 def create_events(calendar_name:str, names:List[str], start_times:List[str], end_times:List[str], locations:List[str]=[], time_zones:Dict={'all':"Asia/Shanghai"}):
