@@ -122,7 +122,11 @@ async def get_todo(start_time:str,end_time:str,done:str="NOT",time_zone:str="Asi
         for calendar in calendars:
             events = calendar.date_search(start=new_start_time, end=new_end_time,compfilter="VTODO")
             for event in events:
-                start_time = to_zone_datetime(event.icalendar_component["DTSTART"].dt, time_zone)
+                st=event.icalendar_component.get("DTSTART","")
+                if st=="":
+                    start_time=None
+                else:
+                    start_time = to_zone_datetime(event.icalendar_component["DTSTART"].dt, time_zone)
                 et=event.icalendar_component.get("DUE","")
                 if et=="":
                     end_time=None
