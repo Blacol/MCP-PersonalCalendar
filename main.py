@@ -157,7 +157,7 @@ async def get_todo(start_time:str,end_time:str,done:str="NOT",time_zone:str="Asi
     logger.debug( f"梳理完毕，内容为：\n{events_result}")
     return events_result
 @fastMCP.tool("get_no_time_todos")
-async def get_no_time_todos(done:str="NOT",time_zone:str="Asia/Shanghai"):
+async def get_no_time_todos(done:str="NOT"):
     """
         获取无开始时间的任务
         done参数如果为NOT，则只查找未完成的任务，如果为DONE则只查找已完成的任务，如果为ALL则查找所有任务。
@@ -165,7 +165,7 @@ async def get_no_time_todos(done:str="NOT",time_zone:str="Asia/Shanghai"):
     principal = client.principal()
     calendars = principal.calendars()
     events_result = """"""
-    logger.debug(f"请求查找无开始时间的待办，时区为：{time_zone}，模式为：{done}的任务")
+    logger.debug(f"请求查找无开始时间的待办，模式为：{done}的任务")
     try:
         for calendar in calendars:
             events = calendar.date_search(start=None, compfilter="VTODO")
