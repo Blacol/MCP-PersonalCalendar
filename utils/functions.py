@@ -1,10 +1,12 @@
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import singledispatch
 from typing import List, Dict
 from xmlrpc.client import DateTime
 
 import pytz
+from caldav import Todo, Event
+from loguru import logger
 from multipledispatch import dispatch
 
 from entities.exceptions import TimeZoneInfoError, ItemNumberException
@@ -41,6 +43,34 @@ def find_calendar(calendars:List,name:str):
         if re.match(f"(.*){name}(.*)",calendar.get_display_name()):
             return calendar
     return None
+@logger.catch
+def find_events(calendar,name:str,start_time:str,zone:str="Asia/Shanghai",todo:bool=False):
+    event_tuple=[]
+    try:
+        zone_start_time=to_zone_datetime(start_time,zone)
+        zone_end_time=zone_start_time+timedelta(hours=12)
+        if todo:
+            events=calendar.search(comp_class=Todo,start=zone_start_time, end=zone_end_time,summary=name)
+        else:
+            events = calendar.search(comp_class=Event,start=zone_start_time,end=zone_end_time,summary=name)
+        for event in events:
+            current_name=str(event.icalendar_component["SUMMARY"])
+            if re.match(f".*{name}.*",current_name)!=None:
+                if todo:
+                    event_tuple.append(
+                        (current_name, str(event.icalendar_component["UID"]), event.icalendar_component["DTSTART"].dt if event.icalendar_component.get("DTSTART","")!="" else None,
+                         event.icalendar_component["DUE"].dt if event.icalendar_component.get("DUE","")!="" else None))
+                else:
+                    event_tuple.append(
+                        (current_name, str(event.icalendar_component["UID"]), event.icalendar_component["DTSTART"].dt,
+                         event.icalendar_component["DTEND"].dt))
+    except Exception as e:
+        logger.error(f"查找事件失败，原因：{e}")
+    # 整理成文字
+    text=""""""
+    for et in event_tuple:
+        text+=f"{et[0]}({et[1]}) {et[2]}~{et[3]}\n"
+    return text
 def time_zone_check(time_zones:Dict,data:List):
     if "all" in time_zones.keys() and "other" in time_zones.keys():
         raise TimeZoneInfoError("时区设置错误，all和other无法同时出现。")
