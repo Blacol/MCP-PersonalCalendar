@@ -333,15 +333,15 @@ async def creat_todos(calendar_name:str, names:List[str], start_times:List[str]=
         logger.debug(f"未找到日历：{calendar_name}")
         return "未找到日历"
 @fastMCP.tool("get_something_with_uid")
-async def get_something_with_uid(calendar_name:str, name:str, start_time:str,time_zone:str='Asia/Shanghai',isTodo:bool=False):
+async def get_something_with_uid(calendar_name:str, name:str, query_time:str, time_zone:str= 'Asia/Shanghai', isTodo:bool=False):
     """
     获取日程或待办（带UID）
     Args:
         calendar_name: 日历名
-        name: 事件名
-        start_time: 开始时间
+        name: 事件名/待办名
+        query_time: 查询时间，查询从这个时间开始及未来的日程或待办事项
         time_zone: 时区（默认'Asian/Shanghai'）
-        isTodo: 是否是待办事项
+        isTodo: 是否是待办事项，默认为False，为True时只返回待办事项，为False时只返回日程
     """
 
     principal = client.principal()
@@ -352,12 +352,11 @@ async def get_something_with_uid(calendar_name:str, name:str, start_time:str,tim
         logger.warning("没有找到对应日历")
         return "没有找到对应日历"
     else:
-        for cal in calendars:
-            if cal.name == calendar_name:
-                events = find_events(calendar, name, start_time, time_zone, isTodo)
-                if len(events)==0:
-                    return "没有事项或待办"
-                return events
+        if calendar.name == calendar_name:
+            events = find_events(calendar, name, query_time, time_zone, isTodo)
+            if len(events)==0:
+                return "没有事项或待办"
+            return events
         return "没有对应日历"
 
 @fastMCP.tool("edit_event")
@@ -376,64 +375,138 @@ async def edit_event(calendar_name:str, uid:str,new_name:str=None, start_time:st
     principal = client.principal()
     calendars=principal.calendars()
     calendar:Calendar=find_calendar(calendars, calendar_name)
-    for cal in calendars:
-        if cal.name == calendar_name:
-            try:
+    if calendar.name == calendar_name:
+        try:
 
-                event=calendar.event_by_uid(uid)
-                if start_time==None:
-                    new_start_time=datetime_to_zone_datetime(event.icalendar_component["DTSTART"].dt,time_zone)
-                else:
-                    new_start_time=to_zone_datetime(start_time, time_zone)
-                if start_time==None:
-                    new_end_time=datetime_to_zone_datetime(event.icalendar_component["DTEND"].dt,time_zone)
-                else:
-                    new_end_time=to_zone_datetime(end_time, time_zone)
-                cal_event=CalendarEventInfo(calendar_name,new_name if new_name!=None else event.icalendar_component["SUMMARY"],
-                                            new_start_time,new_end_time,location if location!=None else event.icalendar_component["LOCATION"])
-                ev=calendar.save_event(summary=cal_event.name,dtstart=cal_event.start_time,dtend=cal_event.end_time,location=cal_event.location)
-                if ev is not None:
-                    logger.debug(f"修改成功：{cal_event.name}(于{cal_event.location}){cal_event.start_time}~{cal_event.end_time}")
-            except Exception as e:
-                logger.error(f"修改错误，原因：{e}")
+            event=calendar.event_by_uid(uid)
+            ori_delta=event.icalendar_component["DTEND"].dt-event.icalendar_component["DTSTART"].dt
+            if start_time==None:
+                new_start_time=datetime_to_zone_datetime(event.icalendar_component["DTSTART"].dt,time_zone)
+            else:
+                new_start_time=to_zone_datetime(start_time, time_zone)
+            if end_time==None:
+                new_end_time=datetime_to_zone_datetime(event.icalendar_component["DTEND"].dt,time_zone)
+            else:
+                new_end_time=to_zone_datetime(end_time, time_zone)
+
+            if new_start_time>new_end_time:
+                logger.warning(f"开始时间{new_start_time}晚于结束时间{new_end_time}")
+                new_end_time=new_start_time+ori_delta
+                logger.warning(f"调整结束时间为{new_end_time}")
+            cal_event=CalendarEventInfo(calendar_name,new_name if new_name!=None else event.icalendar_component["SUMMARY"],
+                                        new_start_time,new_end_time,location if location!=None else event.icalendar_component["LOCATION"])
+            ev=calendar.save_event(uid=uid,summary=cal_event.name,dtstart=cal_event.start_time,dtend=cal_event.end_time,location=cal_event.location)
+            if ev is not None:
+                logger.debug(f"修改成功：{cal_event.name}(于{cal_event.location}){cal_event.start_time}~{cal_event.end_time}")
+                return "修改成功"
+        except Exception as e:
+            logger.error(f"修改错误，原因：{e}")
+            return "修改失败，原因："+str(e)
 @fastMCP.tool("edit_todo")
-async def edit_todo(calendar_name:str, uid:str,new_name:str=None, start_time:str=None,end_time:str=None, location:str=None, time_zone:str='Asia/Shanghai'):
+async def edit_todo(calendar_name:str, uid:str,new_name:str=None, start_time:str=None,end_time:str=None, location:str=None, time_zone:str='Asia/Shanghai',priority:int=-1):
     """
     编辑待办
     Args:
-        calendar_name (str): 日历名称，指定要编辑日程的日历
+        calendar_name (str): 日历名称，指定要编辑待办的日历
         uid (str): 待办UID
-        new_name: 新的待办名字
+        new_name: 新的待办名字，默认为None，None表示不修改，下同
         start_time (str): 新的开始时间，默认为None
         end_time (str): 新的结束时间，默认为None
         location (str): 新的地点，默认为None
         time_zone (str, optional): 新的时区，默认为None
+        priority (int): 新的优先级，默认为-1，-1标识不修改，越高优先级越高
     """
     principal = client.principal()
     calendars=principal.calendars()
     calendar:Calendar=find_calendar(calendars, calendar_name)
-    for cal in calendars:
-        if cal.name == calendar_name:
-            try:
-
-                event=calendar.event_by_uid(uid)
+    if calendar.name == calendar_name:
+        try:
+            event=calendar.todo_by_uid(uid)
+            ori_delta=None
+            if event.icalendar_component.has_key("DUE") and event.icalendar_component.has_key("DTSTART"):
+                ori_delta=event.icalendar_component["DUE"].dt-event.icalendar_component["DTSTART"].dt
                 if start_time==None:
                     new_start_time=datetime_to_zone_datetime(event.icalendar_component["DTSTART"].dt,time_zone)
                 else:
                     new_start_time=to_zone_datetime(start_time, time_zone)
-                if start_time==None:
-                    new_end_time=datetime_to_zone_datetime(event.icalendar_component["DTEND"].dt,time_zone)
+                if end_time==None:
+                    new_end_time=datetime_to_zone_datetime(event.icalendar_component["DUE"].dt,time_zone)
                 else:
                     new_end_time=to_zone_datetime(end_time, time_zone)
-                cal_event=CalendarEventInfo(calendar_name,new_name if new_name!=None else event.icalendar_component["SUMMARY"],
-                                            new_start_time,new_end_time,location if location!=None else event.icalendar_component["LOCATION"])
-                ev=calendar.save_event(summary=cal_event.name,dtstart=cal_event.start_time,dtend=cal_event.end_time,location=cal_event.location)
-                if ev is not None:
-                    logger.debug(f"修改成功：{cal_event.name}(于{cal_event.location}){cal_event.start_time}~{cal_event.end_time}")
-            except Exception as e:
-                logger.error(f"修改错误，原因：{e}")
-
-
+            else:
+                new_start_time = to_zone_datetime(start_time, time_zone)
+                new_end_time=to_zone_datetime(end_time, time_zone)
+            if priority==-1:
+                priority=event.icalendar_component["PRIORITY"]
+            if priority>9 or priority<0:
+                raise ValueError("优先级必须在0-9之间")
+            if new_start_time!=None and new_end_time!=None and new_start_time>new_end_time:
+                logger.warning(f"开始时间{new_start_time}晚于结束时间{new_end_time}")
+                new_end_time=new_start_time+ori_delta
+                logger.warning(f"调整结束时间为{new_end_time}")
+            cal_event=CalendarTodoInfo(calendar_name,new_name if new_name!=None else event.icalendar_component["SUMMARY"],
+                                        new_start_time,new_end_time,priority)
+            ev=calendar.save_todo(uid=uid,summary=cal_event.name,dtstart=cal_event.start_time,due=cal_event.end_time,priority=cal_event.priority)
+            if ev is not None:
+                logger.debug(f"修改成功：{cal_event.name}(优先级：{cal_event.priority}){cal_event.start_time}~{cal_event.end_time}")
+                return "修改成功"
+        except Exception as e:
+            logger.error(f"修改错误，原因：{e}")
+            return "修改失败，原因："+str(e)
+@fastMCP.tool("delete_event")
+async def delete_event(calendar_name:str, uid:str):
+    """
+    删除日程
+    Args:
+        calendar_name (str): 日历名称，指定要删除日程的日历
+        uid (str): 日程UID
+    """
+    principal = client.principal()
+    calendars=principal.calendars()
+    calendar:Calendar=find_calendar(calendars, calendar_name)
+    if calendar.name == calendar_name:
+        try:
+            event=calendar.event_by_uid(uid)
+            if event:
+                event.delete()
+                logger.debug(f"删除成功：{uid}")
+                return "删除成功"
+            else:
+                logger.error(f"删除错误，原因：日程{uid}不存在")
+                return "删除失败，原因：日程"+uid+"不存在"
+        except Exception as e:
+            logger.error(f"删除错误，原因：{e}")
+            return "删除失败，原因："+str(e)
+    else:
+        logger.error(f"删除错误，原因：日历{calendar_name}不存在")
+        return "删除失败，原因：日历"+calendar_name+"不存在"
+@fastMCP.tool("delete_todo")
+async def delete_todo(calendar_name:str, uid:str):
+    """
+    删除待办
+    Args:
+        calendar_name (str): 日历名称，指定要删除待办的日历
+        uid (str): 待办UID
+    """
+    principal = client.principal()
+    calendars=principal.calendars()
+    calendar:Calendar=find_calendar(calendars, calendar_name)
+    if calendar.name == calendar_name:
+        try:
+            todo=calendar.event_by_uid(uid)
+            if todo:
+                todo.delete()
+                logger.debug(f"删除成功：{uid}")
+                return "删除成功"
+            else:
+                logger.error(f"删除错误，原因：待办{uid}不存在")
+                return "删除失败，原因：待办"+uid+"不存在"
+        except Exception as e:
+            logger.error(f"删除错误，原因：{e}")
+            return "删除失败，原因："+str(e)
+    else:
+        logger.error(f"删除错误，原因：日历{calendar_name}不存在")
+        return "删除失败，原因：日历"+calendar_name+"不存在"
 @fastMCP.tool("list_calendars")
 async def list_calendars():
     """

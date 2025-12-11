@@ -48,11 +48,10 @@ def find_events(calendar,name:str,start_time:str,zone:str="Asia/Shanghai",todo:b
     event_tuple=[]
     try:
         zone_start_time=to_zone_datetime(start_time,zone)
-        zone_end_time=zone_start_time+timedelta(hours=12)
         if todo:
-            events=calendar.search(comp_class=Todo,start=zone_start_time, end=zone_end_time,summary=name)
+            events=calendar.search(comp_class=Todo,start=zone_start_time,summary=name)
         else:
-            events = calendar.search(comp_class=Event,start=zone_start_time,end=zone_end_time,summary=name)
+            events = calendar.search(comp_class=Event,start=zone_start_time,summary=name)
         for event in events:
             current_name=str(event.icalendar_component["SUMMARY"])
             if re.match(f".*{name}.*",current_name)!=None:
