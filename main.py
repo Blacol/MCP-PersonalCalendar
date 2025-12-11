@@ -347,7 +347,6 @@ async def get_something_with_uid(calendar_name:str, name:str, query_time:str, ti
     principal = client.principal()
     calendars = principal.calendars()
     calendar: Calendar = find_calendar(calendars, calendar_name)
-
     if calendar is None:
         logger.warning("没有找到对应日历")
         return "没有找到对应日历"
@@ -375,7 +374,10 @@ async def edit_event(calendar_name:str, uid:str,new_name:str=None, start_time:st
     principal = client.principal()
     calendars=principal.calendars()
     calendar:Calendar=find_calendar(calendars, calendar_name)
-    if calendar.name == calendar_name:
+    if calendar is None:
+        logger.warning("没有找到对应日历")
+        return "没有找到对应日历"
+    elif calendar.name == calendar_name:
         try:
 
             event=calendar.event_by_uid(uid)
@@ -419,7 +421,10 @@ async def edit_todo(calendar_name:str, uid:str,new_name:str=None, start_time:str
     principal = client.principal()
     calendars=principal.calendars()
     calendar:Calendar=find_calendar(calendars, calendar_name)
-    if calendar.name == calendar_name:
+    if calendar is None:
+        logger.warning("没有找到对应日历")
+        return "没有找到对应日历"
+    elif calendar.name == calendar_name:
         try:
             event=calendar.todo_by_uid(uid)
             ori_delta=None
@@ -464,7 +469,10 @@ async def delete_event(calendar_name:str, uid:str):
     principal = client.principal()
     calendars=principal.calendars()
     calendar:Calendar=find_calendar(calendars, calendar_name)
-    if calendar.name == calendar_name:
+    if calendar is None:
+        logger.warning("没有找到对应日历")
+        return "没有找到对应日历"
+    elif calendar.name == calendar_name:
         try:
             event=calendar.event_by_uid(uid)
             if event:
@@ -491,9 +499,12 @@ async def delete_todo(calendar_name:str, uid:str):
     principal = client.principal()
     calendars=principal.calendars()
     calendar:Calendar=find_calendar(calendars, calendar_name)
-    if calendar.name == calendar_name:
+    if calendar is None:
+        logger.warning("没有找到对应日历")
+        return "没有找到对应日历"
+    elif calendar.name == calendar_name:
         try:
-            todo=calendar.event_by_uid(uid)
+            todo=calendar.todo_by_uid(uid)
             if todo:
                 todo.delete()
                 logger.debug(f"删除成功：{uid}")
