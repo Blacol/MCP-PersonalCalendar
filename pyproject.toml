@@ -6,5 +6,5 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "mcp[cli]>=1.14.1",
-    "caldav>=2.0.1"
+    "caldav>=2.2.3"
 ]
