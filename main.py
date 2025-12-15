@@ -148,7 +148,7 @@ async def get_todo(start_time:str,end_time:str,done:str="NOT",time_zone:str="Asi
     logger.debug( f"请求查找开始时间：{start_time}，结束时间：{end_time}的待办，时区为：{time_zone}，模式为：{done}的任务")
     try:
         for calendar in calendars:
-            events = calendar.comp_class(start=new_start_time, end=new_end_time,compfilter="VTODO")
+            events = calendar.date_search(start=new_start_time, end=new_end_time,compfilter="VTODO")
             for event in events:
                 st=event.icalendar_component.get("DTSTART","")
                 if st=="":
