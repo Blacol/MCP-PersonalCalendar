@@ -1,14 +1,16 @@
 import json
 import logging
+from datetime import datetime
+from typing import List, Dict
 
-from caldav import Calendar
-from caldav.elements.cdav import CalendarData
+from caldav import Calendar,Todo
 from mcp.server.fastmcp import FastMCP
 from caldav.davclient import get_davclient
 from mcp.server.fastmcp.prompts.base import Message
 
 from entities.calendar_info import CalendarEventInfo, CalendarTodoInfo
-from utils.functions import *
+from utils.functions import to_zone_datetime, time_zone_splits_text, datetime_to_zone_datetime, time_zone_splits, \
+    time_zone_check, data_check, find_calendar, find_events
 from loguru import logger
 fastMCP=FastMCP("Calendar",port=20002)
 
@@ -144,11 +146,12 @@ async def get_todo(start_time:str,end_time:str,done:str="NOT",time_zone:str="Asi
     calendars=principal.calendars()
     events_result=""""""
     new_start_time=to_zone_datetime(start_time,time_zone)
-    new_end_time=to_zone_datetime(start_time,time_zone)
+    new_end_time=to_zone_datetime(end_time,time_zone)
     logger.debug( f"请求查找开始时间：{start_time}，结束时间：{end_time}的待办，时区为：{time_zone}，模式为：{done}的任务")
     try:
         for calendar in calendars:
-            events = calendar.date_search(start=new_start_time, end=new_end_time,compfilter="VTODO")
+            events = calendar.search(comp_class=Todo,start=new_start_time, end=new_end_time)
+
             for event in events:
                 st=event.icalendar_component.get("DTSTART","")
                 if st=="":
@@ -198,6 +201,9 @@ async def get_no_time_todos(done:str="NOT"):
         for calendar in calendars:
             events = calendar.date_search(start=None, compfilter="VTODO")
             for event in events:
+                st_time=event.icalendar_component.get("DTSTART","")
+                if st_time!="":
+                    continue
                 eventInfo = CalendarTodoInfo(calendar.get_display_name(), event.icalendar_component["SUMMARY"],
                                              None, None
                                              , event.icalendar_component.get("PRIORITY", 0))
