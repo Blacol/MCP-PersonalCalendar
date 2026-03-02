@@ -1,5 +1,4 @@
 from datetime import datetime
-from idlelib.debugobj import dispatch
 
 
 class CalendarEventInfo:
