@@ -10,3 +10,4 @@ config_JSON=json.loads(open("config.json","r",encoding="utf-8").read())
 client=get_davclient(username=config_JSON["calendar_username"],
                          password=config_JSON["calendar_password"],
                          url=config_JSON["calendar_url"])
+default_remind_time=config_JSON["default_remind_time"]

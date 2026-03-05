@@ -21,7 +21,24 @@ def to_zone_datetime(strDatetime:str,time_zone:str,format="%Y-%m-%dT%H:%M"):
     tz=pytz.timezone(time_zone)
     tz_time=tz.localize(ori_time)
     return tz_time
-
+def time_calc(time:datetime,num:int,unit:str):
+    """
+    对datetime类型的时间进行加减
+    :param time: 时间
+    :param num: 加减数
+    :param unit: 单位，支持：'m（分钟）,h（小时）,d（天）,w（周）,mo（月）
+    :return: 加减后的时间
+    """
+    if unit=="m":
+        return time.replace(minute=time.minute+num)
+    elif unit=="h":
+        return time.replace(hour=time.hour+num)
+    elif unit=="d":
+        return time.replace(day=time.day+num)
+    elif unit=="w":
+        return time.replace(day=time.day+num*7)
+    elif unit=="mo":
+        return time.replace(month=time.month+num)
 def datetime_to_zone_datetime(date_time,time_zone):
     """
     直接为datetime类型的时间赋予时区
@@ -82,6 +99,21 @@ def time_zone_check(time_zones:Dict,data:List):
         keys.remove("all")
         if len(keys) !=0:
             raise TimeZoneInfoError("时区设置错误，时区数量与数据数目不匹配。")
+def alarm_check(alarm_times:Dict,data:List):
+    if "all" in alarm_times.keys() and "other" in alarm_times.keys():
+        raise TimeZoneInfoError("提醒时间设置错误，all和other无法同时出现。")
+    elif "other" in alarm_times.keys():
+        keys=list(alarm_times.keys())
+        keys.remove("other")
+        if len(keys)>=len(data):
+            raise TimeZoneInfoError("提醒时间设置错误，时区数量与数据数目不匹配。")
+        elif len(keys)==0:
+            raise TimeZoneInfoError("提醒时间设置错误，不能只有other。")
+    elif "all" in alarm_times.keys():
+        keys = list(alarm_times.keys())
+        keys.remove("all")
+        if len(keys) !=0:
+            raise TimeZoneInfoError("提醒时间设置错误，提醒时间数量与数据数目不匹配。")
 def data_check(a:List,*b:List):
     """
     检测一一对应数据的数量
@@ -98,7 +130,7 @@ def time_zone_splits(time_zones:Dict,data:List[str]|List[None])->List[datetime]:
     将数据根据时区分类
     :param time_zones: 时区字典
     :param data: 数据列表
-    :return: 分类后的字典，键为时区，值为对应数据列表
+    :return: 分类后的数据列表
     """
     try:
         if not data:
@@ -132,12 +164,47 @@ def time_zone_splits(time_zones:Dict,data:List[str]|List[None])->List[datetime]:
             return new_times
     except Exception as e:
         raise e
+def alarm_time_splits(alarm_times:Dict, data: List[str] | List[None])->List[datetime]:
+    """
+    将数据根据提醒时间分类
+    :param alarm_times: 提醒时间字典
+    :param data: 数据列表
+    :return: 分类后的对应数据列表
+    """
+    try:
+        if not data:
+            return []
+        if None in data:
+            return []
+        new_times=[]
+        if "all" in alarm_times.keys():
+            for d in data:
+                new_times.append(d)
+            return new_times
+        elif "other" in alarm_times.keys():
+            other_time_zone=alarm_times["other"]
+            del alarm_times["other"]
+            special_alarm=list(alarm_times.keys())
+            for i,v in enumerate(data):
+                if i in special_alarm:
+                    new_times.append(v)
+                else:
+                    new_times.append(other_time_zone)
+            return new_times
+        else:
+            special_time_zone = list(alarm_times.keys())
+            for i, v in enumerate(data):
+                if i in special_time_zone:
+                    new_times.append(v)
+            return new_times
+    except Exception as e:
+        raise e
 def time_zone_splits_text(time_zones:Dict,data:List[str]|List[None])->List[str]:
     """
     将数据根据时区分类，返回字符串类型
     :param time_zones: 时区字典
     :param data: 数据列表
-    :return: 分类后的字典，键为时区，值为对应数据列表
+    :return: 分类后的对应数据列表
     """
     try:
         if not data:
@@ -174,3 +241,11 @@ def time_zone_splits_text(time_zones:Dict,data:List[str]|List[None])->List[str]:
     except Exception as e:
         raise e
         return []
+def to_str_datetime(dt:datetime,format:str="%Y-%m-%dT%H:%M")->str:
+    """
+    将datetime对象转换为字符串
+    :param dt: datetime对象
+    :param format: 字符串格式
+    :return: 转换后的字符串
+    """
+    return dt.strftime(format)

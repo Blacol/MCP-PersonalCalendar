@@ -5,12 +5,13 @@ from caldav import Calendar
 from fastmcp import FastMCP
 from loguru import logger
 
-from apis import client
+from apis import client, default_remind_time
 from entities.calendar_info import CalendarEventInfo
 from utils.functions import to_zone_datetime, time_zone_check, data_check, find_calendar, time_zone_splits, \
     datetime_to_zone_datetime
 
 event_mcp=FastMCP("event")
+
 @event_mcp.tool("get_events")
 @logger.catch()
 async def get_events(start_time:str,end_time:str,time_zone:str="Asia/Shanghai"):
@@ -45,7 +46,9 @@ async def get_events(start_time:str,end_time:str,time_zone:str="Asia/Shanghai"):
     return events_result
 @event_mcp.tool("create_events")
 @logger.catch()
-async def create_events(calendar_name:str, names:List[str], start_times:List[str], end_times:List[str], locations:List[str]=[], time_zones:Dict={'all':"Asia/Shanghai"}):
+async def create_events(calendar_name:str, names:List[str], start_times:List[str],
+                        end_times:List[str], locations:List[str]=[],
+                        time_zones:Dict={'all':"Asia/Shanghai"},remind:Dict={'all':default_remind_time}):
     """
     创建多个日程
     Args:
@@ -55,6 +58,8 @@ async def create_events(calendar_name:str, names:List[str], start_times:List[str
         end_times (List[str]): 结束时间列表，例如: ['2025-01-01T10:00', '2025-01-01T12:00', '2025-01-03T12:00']
         locations (List[str], optional): 地点列表，例如: ['上海火车站', 'X街3室', '']
         time_zones (Dict[str,str], optional): 时区字典，例如: {'2': 'Asia/Tokyo', 'other': 'Asia/Shanghai'}
+        remind (str, optional): 提醒时间，格式：'数字+单位'，数字支持负数，单位支持：'m（分钟）,h（小时）,d（天）,w（周）,mo（月）。
+        负数表示开始时间前提醒，正数（必须有正号）表示开始时间后提醒。对于多事件的提醒，处理方式与time_zones相同。
     """
     time_zone_check(time_zones,names)
     data_check(names,start_times,end_times)
