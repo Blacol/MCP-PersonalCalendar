@@ -9,3 +9,6 @@ dependencies = [
     "caldav>=2.2.3",
     "toml>=0.10.2"
 ]
+[build-system]
+requires= ["setuptools"]
+build-backend= "setuptools.build"
