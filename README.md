@@ -22,7 +22,8 @@
    {
     "calendar_url": "Caldav服务器地址",
     "calendar_username": "日历用户名",
-    "calendar_password": "日历密码"
+    "calendar_password": "日历密码",
+    "default_remind_time": "-15m"
    }
    ```
 3. 运行下列指令安装依赖
@@ -32,7 +33,7 @@
    # 进入虚拟环境（Linux）
    source .venv/bin/activate
    # 安装依赖
-   uv pip install .
+   uv pip install -e .
    # 运行程序
    uv run main.py
    ```
@@ -52,13 +53,6 @@
    }
    ```
 5. 打开模型进行测试
-
-   ~~因部分模型提供商提供的模型无法感知时间，有两种解决方案：~~
-   
-   ~~1. 创建日程时指定时间~~
-   ~~2. 自己再启用一个时间MCP~~
-
-   从v1.1.0版本开始内部提供一个获取当前时间的工具，无需外部配置。
 
    **添加多个日程**
    ```text
