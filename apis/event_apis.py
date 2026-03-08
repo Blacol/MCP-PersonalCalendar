@@ -8,7 +8,7 @@ from loguru import logger
 from apis import client, default_remind_time
 from entities.calendar_info import CalendarEventInfo
 from utils.functions import to_zone_datetime, time_zone_check, data_check, find_calendar, time_zone_splits, \
-    datetime_to_zone_datetime
+    datetime_to_zone_datetime, alarm_time_splits
 
 event_mcp=FastMCP("event")
 
@@ -50,7 +50,7 @@ async def create_events(calendar_name:str, names:List[str], start_times:List[str
                         end_times:List[str], locations:List[str]=[],
                         time_zones:Dict={'all':"Asia/Shanghai"},remind:Dict={'all':default_remind_time}):
     """
-    创建多个日程
+    创建多个日程。允许创建带提醒时间的日程。（仅能添加1个提醒器，多重提醒器请借助第三方软件完成。）
     Args:
         calendar_name (str): 日历名称，指定要添加待办事项的日历
         names (List[str]): 日程名称列表，例如: ['坐火车', '去A家', '开会']
@@ -74,12 +74,14 @@ async def create_events(calendar_name:str, names:List[str], start_times:List[str
     if calendar!=None:
         zoned_start_times=time_zone_splits(time_zones,start_times)
         zoned_end_times=time_zone_splits(time_zones,end_times)
+        alarm_times=alarm_time_splits(remind,zoned_start_times)
         for i in range(len(names)):
-            calendar_info_list.append(CalendarEventInfo(calendar_name,names[i],zoned_start_times[i],zoned_end_times[i],locations[i]))
+            calendar_info_list.append(CalendarEventInfo(calendar_name,names[i],zoned_start_times[i],zoned_end_times[i],locations[i],[alarm_times[i]]))
         # 开始写入日历
         for calendar_info in calendar_info_list:
             try:
-                event=calendar.save_event(summary=calendar_info.name,location=calendar_info.location,dtstart=calendar_info.start_time,dtend=calendar_info.end_time)
+                event=calendar.save_event(summary=calendar_info.name,location=calendar_info.location,dtstart=calendar_info.start_time,dtend=calendar_info.end_time,
+                                          alarm_trigger=calendar_info.alarm_time[0],alarm_action="DISPLAY")
                 if event is not None:
                     logger.debug(f"生成日程：{event.icalendar_component['SUMMARY']}，日历：{calendar.get_display_name()}成功")
                     success_info+=calendar_info.name+"\n"
@@ -93,7 +95,9 @@ async def create_events(calendar_name:str, names:List[str], start_times:List[str
         return "未找到日历"
 @event_mcp.tool("edit_event")
 @logger.catch()
-async def edit_event(calendar_name:str, uid:str,new_name:str=None, start_time:str=None,end_time:str=None, location:str=None, time_zone:str='Asia/Shanghai'):
+async def edit_event(calendar_name:str, uid:str,new_name:str=None, start_time:str=None,
+                     end_time:str=None, location:str=None, time_zone:str='Asia/Shanghai',
+                     new_remind_time:str=None):
     """
     编辑日程
     Args:
@@ -104,6 +108,7 @@ async def edit_event(calendar_name:str, uid:str,new_name:str=None, start_time:st
         end_time (str): 新的结束时间，默认为None
         location (str): 新的地点，默认为None
         time_zone (str, optional): 新的时区，默认为None
+        new_remind_time (str, optional): 新的提醒时间，默认为None,时间格式为'数字+单位'
     """
     principal = client.principal()
     calendars=principal.calendars()
@@ -131,7 +136,9 @@ async def edit_event(calendar_name:str, uid:str,new_name:str=None, start_time:st
                 logger.warning(f"调整结束时间为{new_end_time}")
             cal_event=CalendarEventInfo(calendar_name,new_name if new_name!=None else event.icalendar_component["SUMMARY"],
                                         new_start_time,new_end_time,location if location!=None else event.icalendar_component["LOCATION"])
-            ev=calendar.save_event(uid=uid,summary=cal_event.name,dtstart=cal_event.start_time,dtend=cal_event.end_time,location=cal_event.location)
+            ev=calendar.save_event(uid=uid,summary=cal_event.name,dtstart=cal_event.start_time,dtend=cal_event.end_time,
+                                   location=cal_event.location,alarm_trigger=new_remind_time,
+                                   alarm_action="DISPLAY")
             if ev is not None:
                 logger.debug(f"修改成功：{cal_event.name}(于{cal_event.location}){cal_event.start_time}~{cal_event.end_time}")
                 return "修改成功"

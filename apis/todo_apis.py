@@ -7,7 +7,7 @@ from loguru import logger
 from apis import client
 from entities.calendar_info import CalendarTodoInfo
 from utils.functions import to_zone_datetime, time_zone_check, data_check, find_calendar, time_zone_splits, \
-    datetime_to_zone_datetime, find_events
+    datetime_to_zone_datetime, find_events, alarm_time_splits
 
 todo_mcp=FastMCP("todo")
 @todo_mcp.tool("get_todos")
@@ -114,7 +114,10 @@ async def get_no_time_todos(done:str="NOT"):
 
 
 @todo_mcp.tool("create_todos")
-async def creat_todos(calendar_name:str, names:List[str], start_times:List[str]=[], end_times:List[str]=[],priority:List[int]=[],time_zones:Dict[str,str]={"all":"Asia/Shanghai"}):
+async def creat_todos(calendar_name:str, names:List[str], start_times:List[str]=[],
+                      end_times:List[str]=[],priority:List[int]=[],
+                      time_zones:Dict[str,str]={"all":"Asia/Shanghai"},
+                      remind_times:Dict[str,str]={"all":"-15m"}):
     """
     创建多个任务（日期的格式是：2025-09-29T10:00），默认为东八区。支持修改时区
     Args:
@@ -124,7 +127,7 @@ async def creat_todos(calendar_name:str, names:List[str], start_times:List[str]=
         end_times (List[str], optional): 结束时间列表，例如: ['2025-01-01T10:00', '2025-01-01T12:00', '2025-01-03T12:00']
         priority (List[int], optional): 优先级列表，例如: [1, 2, 0]，数字越大优先级越高
         time_zones (Dict[str,str], optional): 时区字典，例如: {'2': 'Asia/Tokyo', 'other': 'Asia/Shanghai'}
-
+        remind_times (Dict[str,str], optional): 提醒时间字典，例如: {'2': '-15m', 'other': '-30m'}
     """
     time_zone_check(time_zones, names)
     if priority==[]:
@@ -148,21 +151,26 @@ async def creat_todos(calendar_name:str, names:List[str], start_times:List[str]=
         # 处理所有日程时区一致的情况
         zoned_start_times = time_zone_splits(time_zones, start_times)
         zoned_end_times = time_zone_splits(time_zones, end_times)
+        alarm_times=alarm_time_splits(remind_times,zoned_start_times)
         for i in range(len(names)):
             if None not in start_times and None not in end_times!=[]:
                 calendar_info_list.append(
-                    CalendarTodoInfo(calendar_name,names[i], zoned_start_times[i], zoned_end_times[i], priority[i]))
+                    CalendarTodoInfo(calendar_name,names[i], zoned_start_times[i],
+                                     zoned_end_times[i],
+                                     priority[i],[alarm_times[i]]))
             else:
                 calendar_info_list.append(CalendarTodoInfo(calendar_name,names[i],
                                                            zoned_start_times[i] if zoned_start_times!=[] else None,
                                                            zoned_end_times[i] if zoned_end_times!=[] else None,
-                                                           priority[i]))
+                                                           priority[i],[alarm_times[i]]))
 
         # 开始写入日历
         for calendar_info in calendar_info_list:
             try:
                 event = calendar.save_todo(summary=calendar_info.name, priority=calendar_info.priority,
-                                            dtstart=calendar_info.start_time, due=calendar_info.end_time)
+                                            dtstart=calendar_info.start_time,
+                                           due=calendar_info.end_time,
+                                           alarm_trigger=calendar_info.alarm_time[0],alarm_action="DISPLAY")
                 if event is not None:
                     logger.debug(
                         f"生成任务：{event.icalendar_component['SUMMARY']}，日历：{calendar.get_display_name()}成功")
