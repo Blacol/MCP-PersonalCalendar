@@ -12,3 +12,5 @@ dependencies = [
 [build-system]
 requires= ["setuptools"]
 build-backend= "setuptools.build"
+[tool.setuptools.packages.find]
+where = ["."]
