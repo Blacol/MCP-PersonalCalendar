@@ -10,7 +10,7 @@ dependencies = [
     "toml>=0.10.2"
 ]
 [build-system]
-requires= ["setuptools.build"]
+requires= ["setuptools"]
 build-backend= "setuptools.build"
 
 [tool.setuptools.packages.find]
