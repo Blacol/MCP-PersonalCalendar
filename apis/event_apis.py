@@ -16,11 +16,9 @@ event_mcp=FastMCP("event")
 @logger.catch()
 async def get_events(start_time:str,end_time:str,time_zone:str="Asia/Shanghai"):
     """
-    获取指定日期的日程。
-    Args:
-        start_time (str): 开始时间，格式为：2025-09-29T10:00
-        end_time (str): 结束时间，格式为：2025-09-29T10:00
-        time_zone (str, optional): 时区，默认为东八区。
+    （需要先调用get_current_time工具获取当前时间。）
+    获取指定日期的日程。从start_time~end_time。
+    日期格式为：2025-09-29T10:00，默认东八区。
     """
     if start_time=="" or end_time=="":
         logging.warning("传入不规范，开始时间或结束时间为空")
@@ -50,16 +48,12 @@ async def create_events(calendar_name:str, names:List[str], start_times:List[str
                         end_times:List[str], locations:List[str]=[],
                         time_zones:Dict={'all':"Asia/Shanghai"},remind:Dict={'all':default_remind_time}):
     """
+    （需要先调用get_current_time工具获取当前时间。）
     创建多个日程。允许创建带提醒时间的日程。（仅能添加1个提醒器，多重提醒器请借助第三方软件完成。）
-    Args:
-        calendar_name (str): 日历名称，指定要添加待办事项的日历
-        names (List[str]): 日程名称列表，例如: ['坐火车', '去A家', '开会']
-        start_times (List[str]): 开始时间列表，例如: ['2025-01-01T09:00', '2025-01-01T11:00', '2025-01-03T09:00']
-        end_times (List[str]): 结束时间列表，例如: ['2025-01-01T10:00', '2025-01-01T12:00', '2025-01-03T12:00']
-        locations (List[str], optional): 地点列表，例如: ['上海火车站', 'X街3室', '']
-        time_zones (Dict[str,str], optional): 时区字典，例如: {'2': 'Asia/Tokyo', 'other': 'Asia/Shanghai'}
-        remind (str, optional): 提醒时间，格式：'数字+单位'，数字支持负数，单位支持：'m（分钟）,h（小时）,d（天）,w（周）,mo（月）。
-        负数表示开始时间前提醒，正数（必须有正号）表示开始时间后提醒。对于多事件的提醒，处理方式与time_zones相同。
+    时间格式：2025-09-29T10:00
+    使用字典设置每个事件的时区，例如：{'2': 'Asia/Tokyo', 'other': 'Asia/Shanghai'}，特殊键有"all"和"other"，
+    all用来约定所有事件的时区。other则表示在其他事件的时区。
+    提醒默认开始前15分钟，使用字典设置每个事件的提醒时间，例如：{'2': '-15m', 'other': '-15m'}。与时区一样也有all键。
     """
     time_zone_check(time_zones,names)
     data_check(names,start_times,end_times)
@@ -99,16 +93,8 @@ async def edit_event(calendar_name:str, uid:str,new_name:str=None, start_time:st
                      end_time:str=None, location:str=None, time_zone:str='Asia/Shanghai',
                      new_remind_time:str=None):
     """
-    编辑日程
-    Args:
-        calendar_name (str): 日历名称，指定要编辑日程的日历
-        uid (str): 日程UID
-        new_name: 新的日程名字
-        start_time (str): 新的开始时间，默认为None
-        end_time (str): 新的结束时间，默认为None
-        location (str): 新的地点，默认为None
-        time_zone (str, optional): 新的时区，默认为None
-        new_remind_time (str, optional): 新的提醒时间，默认为None,时间格式为'数字+单位'
+    （需要先调用get_something_with_uid工具获取事件UID。）
+    编辑日程，根据日历名和事件UID（）找到事件后进行修改。不修改的内容置为null。
     """
     principal = client.principal()
     calendars=principal.calendars()
@@ -149,10 +135,8 @@ async def edit_event(calendar_name:str, uid:str,new_name:str=None, start_time:st
 @logger.catch()
 async def delete_event(calendar_name:str, uid:str):
     """
-    删除日程
-    Args:
-        calendar_name (str): 日历名称，指定要删除日程的日历
-        uid (str): 日程UID
+    （需要先调用get_something_with_uid工具获取事件UID和list_calendars获取日历名）
+    删除日程，根据事件UID和日历名找到事件后进行删除。
     """
     principal = client.principal()
     calendars=principal.calendars()

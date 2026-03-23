@@ -176,7 +176,7 @@ def alarm_time_splits(alarm_times:Dict, data: List[datetime] | List[None])->List
     将数据根据提醒时间分类
     :param alarm_times: 提醒时间字典
     :param data: 开始时间列表
-    :return: 分类后的对应数据列表
+    :return: 分类后的已经计算好的时间。
     """
     alarm_times2=deepcopy(alarm_times)
     try:
