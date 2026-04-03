@@ -35,7 +35,8 @@ async def get_events(start_time:str,end_time:str,time_zone:str="Asia/Shanghai"):
             for event in events:
                 st=event.icalendar_component["DTSTART"].dt
                 et=event.icalendar_component["DTEND"].dt
-                eventInfo=CalendarEventInfo(calendar.get_display_name(),event.icalendar_component["SUMMARY"],st,et)
+                eventInfo=CalendarEventInfo(calendar.get_display_name(),event.icalendar_component["SUMMARY"],st,et,
+                                            event.icalendar_component.get("LOCATION",""))
                 events_result+=eventInfo.to_LLM()
     except Exception as e:
         logger.error(f"获取日程时出错：{e}")
