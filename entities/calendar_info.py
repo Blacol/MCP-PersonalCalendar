@@ -57,7 +57,7 @@ class CalendarTodoInfo:
         status(str)：任务状态
         priority(int)=0：优先级，值越高优先级越低
     """
-    def __init__(self,calendar_name:str,name:str,start_time:datetime|None,end_time:datetime|None,priority:int=0,alarm_time:List=None):
+    def __init__(self,calendar_name:str,name:str,start_time:datetime|None,end_time:datetime|None,priority:int=0,position:str="",alarm_time:List=None):
         self.name=name
         self.start_time=start_time
         self.end_time=end_time
@@ -65,6 +65,7 @@ class CalendarTodoInfo:
         self.status=""
         self.priority=priority
         self.alarm_time=alarm_time
+        self.position=position
 
     def to_dict(self):
         return {
@@ -74,12 +75,14 @@ class CalendarTodoInfo:
             "end_time":self.end_time,
             "status":self.status,
             "priority":self.priority,
-            "alarm_time":self.alarm_time
+            "alarm_time":self.alarm_time,
+            "position":self.position
+
         }
 
     @staticmethod
     def from_dic(dic):
-        return CalendarTodoInfo(dic["calendar_name"],dic["name"],dic["start_time"],dic["end_time"],dic["priority"],dic["alarm_time"])
+        return CalendarTodoInfo(dic["calendar_name"],dic["name"],dic["start_time"],dic["end_time"],dic["priority"],dic["alarm_time"],dic["position"])
     def to_LLM(self)->str:
         atext=alarm_text(self.alarm_time)
-        return f"日历：{self.calendar_name}，待办：{self.name}\n时间：{self.start_time}~{self.end_time}\n状态：{self.status}\n优先级：{self.priority}\n于{atext}提醒\n"
+        return f"日历：{self.calendar_name}，待办：{self.name}\n时间：{self.start_time}~{self.end_time}\n状态：{self.status}\n地点：{self.position}\n优先级：{self.priority}\n于{atext}提醒\n"
