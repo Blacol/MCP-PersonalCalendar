@@ -1,6 +1,6 @@
 [project]
 name = "mcp-personalcalendar"
-version = "1.2.0-beta3"
+version = "1.2.0"
 description = "为个人搭建的Caldav日历协议打造的MCP工具。"
 readme = "README.md"
 requires-python = ">=3.11"

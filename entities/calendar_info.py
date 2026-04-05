@@ -65,7 +65,7 @@ class CalendarTodoInfo:
         self.status=""
         self.priority=priority
         self.alarm_time=alarm_time
-        self.position=position
+        self.location=position
 
     def to_dict(self):
         return {
@@ -76,13 +76,13 @@ class CalendarTodoInfo:
             "status":self.status,
             "priority":self.priority,
             "alarm_time":self.alarm_time,
-            "position":self.position
+            "location":self.location
 
         }
 
     @staticmethod
     def from_dic(dic):
-        return CalendarTodoInfo(dic["calendar_name"],dic["name"],dic["start_time"],dic["end_time"],dic["priority"],dic["alarm_time"],dic["position"])
+        return CalendarTodoInfo(dic["calendar_name"],dic["name"],dic["start_time"],dic["end_time"],dic["priority"],dic["alarm_time"],dic["location"])
     def to_LLM(self)->str:
         atext=alarm_text(self.alarm_time)
-        return f"日历：{self.calendar_name}，待办：{self.name}\n时间：{self.start_time}~{self.end_time}\n状态：{self.status}\n地点：{self.position}\n优先级：{self.priority}\n于{atext}提醒\n"
+        return f"日历：{self.calendar_name}，待办：{self.name}\n时间：{self.start_time}~{self.end_time}\n状态：{self.status}\n地点：{self.location}\n优先级：{self.priority}\n于{atext}提醒\n"

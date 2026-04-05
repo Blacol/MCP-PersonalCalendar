@@ -39,7 +39,7 @@ async def get_todo(start_time:str,end_time:str,done:str="NOT",time_zone:str="Asi
                 else:
                     et = et.dt
                 eventInfo=CalendarTodoInfo(calendar.get_display_name(),event.icalendar_component["SUMMARY"],st,et
-                                           ,event.icalendar_component.get("PRIORITY",0))
+                                           ,event.icalendar_component.get("PRIORITY",0),event.icalendar_component.get("POSITION",""))
                 eventInfo.status=event.icalendar_instance.subcomponents[-1].get("STATUS","未开始") if event.icalendar_component.get("STATUS","")=="" else event.icalendar_component.get("STATUS","")
                 if done=='DONE':
                     if eventInfo.status=="COMPLETED":
@@ -164,10 +164,10 @@ async def creat_todos(calendar_name:str, names:List[str], start_times:List[str],
         for calendar_info in calendar_info_list:
             try:
                 event = calendar.save_todo(summary=calendar_info.name, priority=calendar_info.priority,
-                                            dtstart=calendar_info.start_time,
+                                           dtstart=calendar_info.start_time,
                                            due=calendar_info.end_time,
-                                           position=calendar_info.position,
-                                           alarm_trigger=calendar_info.alarm_time[0],alarm_action="DISPLAY")
+                                           location=calendar_info.location,
+                                           alarm_trigger=calendar_info.alarm_time[0], alarm_action="DISPLAY")
                 if event is not None:
                     logger.debug(
                         f"生成任务：{event.icalendar_component['SUMMARY']}，日历：{calendar.get_display_name()}成功")
@@ -208,8 +208,9 @@ async def create_notime_todos(calendar_name:str, names:List[str],priority:List[i
         for calendar_info in calendar_info_list:
             try:
                 event = calendar.save_todo(summary=calendar_info.name, priority=calendar_info.priority,
-                                            dtstart=calendar_info.start_time,
-                                           due=calendar_info.end_time,position=calendar_info.position)
+                                           dtstart=calendar_info.start_time,
+                                           due=calendar_info.end_time,
+                                           location=calendar_info.location)
                 if event is not None:
                     logger.debug(
                         f"生成任务：{event.icalendar_component['SUMMARY']}，日历：{calendar.get_display_name()}成功")
@@ -262,10 +263,10 @@ async def create_noend_todos(calendar_name:str,start_times:List[str], names:List
         for calendar_info in calendar_info_list:
             try:
                 event = calendar.save_todo(summary=calendar_info.name, priority=calendar_info.priority,
-                                            dtstart=calendar_info.start_time,
+                                           dtstart=calendar_info.start_time,
                                            due=calendar_info.end_time,
-                                           position=calendar_info.position,
-                                           alarm_trigger=calendar_info.alarm_time[0],alarm_action="DISPLAY")
+                                           location=calendar_info.location,
+                                           alarm_trigger=calendar_info.alarm_time[0], alarm_action="DISPLAY")
                 if event is not None:
                     logger.debug(
                         f"生成任务：{event.icalendar_component['SUMMARY']}，日历：{calendar.get_display_name()}成功")
@@ -322,9 +323,9 @@ async def edit_todo(calendar_name:str, uid:str,new_name:str=None, start_time:str
                 logger.warning(f"调整结束时间为{new_end_time}")
             cal_event=CalendarTodoInfo(calendar_name,new_name if new_name!=None else event.icalendar_component["SUMMARY"],
                                         new_start_time,new_end_time,priority,position)
-            ev=calendar.save_todo(uid=uid,summary=cal_event.name,dtstart=cal_event.start_time,
-                                  due=cal_event.end_time,priority=cal_event.priority,alarm_trigger=new_remind_time,
-                                   alarm_action="DISPLAY",location=cal_event.position)
+            ev=calendar.save_todo(uid=uid, summary=cal_event.name, dtstart=cal_event.start_time,
+                                  due=cal_event.end_time, priority=cal_event.priority, alarm_trigger=new_remind_time,
+                                  alarm_action="DISPLAY", location=cal_event.location)
             if ev is not None:
                 logger.debug(f"修改成功：{cal_event.name}(优先级：{cal_event.priority}){cal_event.start_time}~{cal_event.end_time}")
                 return "修改成功"
