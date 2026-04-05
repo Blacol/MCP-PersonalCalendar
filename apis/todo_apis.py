@@ -39,7 +39,7 @@ async def get_todo(start_time:str,end_time:str,done:str="NOT",time_zone:str="Asi
                 else:
                     et = et.dt
                 eventInfo=CalendarTodoInfo(calendar.get_display_name(),event.icalendar_component["SUMMARY"],st,et
-                                           ,event.icalendar_component.get("PRIORITY",0),event.icalendar_component.get("POSITION",""))
+                                           ,event.icalendar_component.get("PRIORITY",0),event.icalendar_component.get("LOCATION",""))
                 eventInfo.status=event.icalendar_instance.subcomponents[-1].get("STATUS","未开始") if event.icalendar_component.get("STATUS","")=="" else event.icalendar_component.get("STATUS","")
                 if done=='DONE':
                     if eventInfo.status=="COMPLETED":
