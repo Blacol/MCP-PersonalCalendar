@@ -115,7 +115,7 @@ async def creat_todos(calendar_name:str, names:List[str], start_times:List[str],
                       end_times:List[str]=[],priority:List[int]=[],
                       time_zones:Dict[str,str]={"all":"Asia/Shanghai"},
                       remind_times:Dict[str,str]={"all":"-15m"},
-                      position:str=""):
+                      positions:List[str]=[]):
     """
     （需要先调用get_current_time工具获取当前时间。）
     创建多个任务（日期的格式是：2025-09-29T10:00），默认为东八区。支持修改时区
@@ -153,12 +153,12 @@ async def creat_todos(calendar_name:str, names:List[str], start_times:List[str],
                 calendar_info_list.append(
                     CalendarTodoInfo(calendar_name, names[i], zoned_start_times[i],
                                      zoned_end_times[i] if zoned_end_times is not None else None,
-                                     priority[i], position,[alarm_times[i]]))
+                                     priority[i], positions[i],[alarm_times[i]]))
             else:
                 calendar_info_list.append(CalendarTodoInfo(calendar_name, names[i],
                                                            zoned_start_times[i] if zoned_start_times is not None else None,
                                                            zoned_end_times[i] if zoned_end_times is not None else None,
-                                                           priority[i],position,[alarm_times[i]]))
+                                                           priority[i],positions[i],[alarm_times[i]]))
 
         # 开始写入日历
         for calendar_info in calendar_info_list:
@@ -183,7 +183,7 @@ async def creat_todos(calendar_name:str, names:List[str], start_times:List[str],
 
 @todo_mcp.tool("create_notime_todos")
 @logger.catch()
-async def create_notime_todos(calendar_name:str, names:List[str],priority:List[int]=[],position:str=""):
+async def create_notime_todos(calendar_name:str, names:List[str],priority:List[int]=[],positions:List[str]=[]):
     """
     （需要先调用get_current_time工具获取当前时间。）
     创建多个无时间的待办任务
@@ -202,7 +202,7 @@ async def create_notime_todos(calendar_name:str, names:List[str],priority:List[i
             calendar_info_list.append(
                 CalendarTodoInfo(calendar_name,names[i], None,
                                  None,
-                                 priority[i],position,[]))
+                                 priority[i],positions[i],[]))
 
         # 开始写入日历
         for calendar_info in calendar_info_list:
@@ -227,7 +227,7 @@ async def create_notime_todos(calendar_name:str, names:List[str],priority:List[i
 @logger.catch()
 async def create_noend_todos(calendar_name:str,start_times:List[str], names:List[str],priority:List[int]=[],
                             remind_times:Dict[str,str]={"all":"-15m"},timezones:Dict[str,str]={"all":"Asia/Shanghai"},
-                             position:str=""):
+                             positions:List[str]=""):
     """
     （需要先调用get_current_time工具获取当前时间。）
     创建多个无结束时间的待办任务
@@ -257,7 +257,7 @@ async def create_noend_todos(calendar_name:str,start_times:List[str], names:List
             calendar_info_list.append(
                 CalendarTodoInfo(calendar_name,names[i], zoned_start_times[i],
                                  None,
-                                 priority[i],position,zoned_remind_times))
+                                 priority[i],positions[i],zoned_remind_times))
 
         # 开始写入日历
         for calendar_info in calendar_info_list:
