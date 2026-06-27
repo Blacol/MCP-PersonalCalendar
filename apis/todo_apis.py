@@ -7,7 +7,7 @@ from loguru import logger
 from apis import client
 from entities.calendar_info import CalendarTodoInfo
 from utils.functions import to_zone_datetime, time_zone_check, data_check, find_calendar, time_zone_splits, \
-    datetime_to_zone_datetime, find_events, alarm_time_splits, time_calc
+    datetime_to_zone_datetime, alarm_time_splits
 
 todo_mcp=FastMCP("todo")
 @todo_mcp.tool("get_todos")
