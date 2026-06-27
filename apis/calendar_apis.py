@@ -39,7 +39,7 @@ async def list_calendars():
 
 @calendar_mcp.tool("get_something_with_uid")
 @logger.catch()
-async def get_something_with_uid(calendar_name:str, name:str, query_time:str, time_zone:str= 'Asia/Shanghai', isTodo:bool=False):
+async def get_something_with_uid(calendar_name:str, name:str, start_time:str, time_zone:str= 'Asia/Shanghai', isTodo:bool=False):
     """
     获取特定时间的日程或待办（带UID）
     """
@@ -52,7 +52,7 @@ async def get_something_with_uid(calendar_name:str, name:str, query_time:str, ti
         return "没有找到对应日历"
     else:
         if calendar.name == calendar_name:
-            events = find_events(calendar, name, query_time, time_zone, isTodo)
+            events = find_events(calendar, name, start_time, time_zone, isTodo)
             if len(events)==0:
                 return "没有事项或待办"
             return events
