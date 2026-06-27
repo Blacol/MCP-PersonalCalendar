@@ -127,6 +127,8 @@ async def creat_todos(calendar_name:str, names:List[str], start_times:List[str],
     time_zone_check(time_zones, names)
     if priority==[]:
         priority=[0]*len(names)
+    if positions==[]:
+        positions=[""]*len(names)
     if start_times==[]:
         logger.error("传入不规范，开始时间为空")
         return "传入不规范，开始时间为空"
@@ -190,6 +192,8 @@ async def create_notime_todos(calendar_name:str, names:List[str],priority:List[i
     """
     if priority==[]:
         priority=[0]*len(names)
+    if positions==[]:
+        positions=[""]*len(names)
     principal = client.principal()
     calendars = principal.calendars()
     calendar = find_calendar(calendars, calendar_name)
@@ -238,6 +242,8 @@ async def create_noend_todos(calendar_name:str,start_times:List[str], names:List
 
     if priority==[]:
         priority=[0]*len(names)
+    if positions==[]:
+        positions=[""]*len(names)
     if start_times!=None:
         data_check(names, start_times, priority)
         zoned_start_times = time_zone_splits(timezones, start_times)
