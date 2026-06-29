@@ -27,9 +27,9 @@ async def get_events(start_time:str,end_time:str,time_zone:str="Asia/Shanghai"):
     principal=client.principal()
     calendars=principal.calendars()
     events_result=""""""
-    new_start_time=to_zone_datetime(start_time,time_zone)
-    new_end_time=to_zone_datetime(end_time,time_zone)
     try:
+        new_start_time=to_zone_datetime(start_time,time_zone)
+        new_end_time=to_zone_datetime(end_time,time_zone)
         for calendar in calendars:
             events = calendar.date_search(start=new_start_time, end=new_end_time)
             for event in events:
@@ -67,9 +67,12 @@ async def create_events(calendar_name:str, names:List[str], start_times:List[str
     if not locations:
         locations=[""]*len(names)
     if calendar!=None:
-        zoned_start_times=time_zone_splits(time_zones,start_times)
-        zoned_end_times=time_zone_splits(time_zones,end_times)
-        alarm_times=alarm_time_splits(remind,zoned_start_times)
+        try:
+            zoned_start_times=time_zone_splits(time_zones,start_times)
+            zoned_end_times=time_zone_splits(time_zones,end_times)
+            alarm_times=alarm_time_splits(remind,zoned_start_times)
+        except Exception as e:
+            return f"创建事件失败（时间与提醒处理过程失败），原因:{e}"
         for i in range(len(names)):
             calendar_info_list.append(CalendarEventInfo(calendar_name,names[i],zoned_start_times[i],zoned_end_times[i],locations[i],[alarm_times[i]]))
         # 开始写入日历

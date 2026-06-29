@@ -3,9 +3,11 @@ from copy import deepcopy
 from datetime import datetime, timedelta
 from typing import List, Dict
 
+from caldav.collection import Calendar
 import pytz
 from caldav import Todo, Event
 from loguru import logger
+
 
 from entities.exceptions import TimeZoneInfoError, ItemNumberException
 def to_zone_datetime(strDatetime:str,time_zone:str,format="%Y-%m-%dT%H:%M"):
@@ -63,28 +65,29 @@ def find_calendar(calendars:List,name:str):
         if re.match(f"(.*){name}(.*)",calendar.get_display_name()):
             return calendar
     return None
-@logger.catch
-def find_events(calendar,name:str,start_time:str,zone:str="Asia/Shanghai",todo:bool=False):
-    event_tuple=[]
-    try:
-        zone_start_time=to_zone_datetime(start_time,zone)
-        if todo:
-            events=calendar.search(comp_class=Todo,start=zone_start_time,summary=name)
-        else:
-            events = calendar.search(comp_class=Event,start=zone_start_time,summary=name)
-        for event in events:
-            current_name=str(event.icalendar_component["SUMMARY"])
-            if re.match(f".*{name}.*",current_name)!=None:
-                if todo:
-                    event_tuple.append(
-                        (current_name, str(event.icalendar_component["UID"]), event.icalendar_component["DTSTART"].dt if event.icalendar_component.get("DTSTART","")!="" else None,
-                         event.icalendar_component["DUE"].dt if event.icalendar_component.get("DUE","")!="" else None))
-                else:
-                    event_tuple.append(
-                        (current_name, str(event.icalendar_component["UID"]), event.icalendar_component["DTSTART"].dt,
-                         event.icalendar_component["DTEND"].dt))
-    except Exception as e:
-        logger.error(f"查找事件失败，原因：{e}")
+def find_events(calendar:Calendar,name:str,start_time:str,zone:str="Asia/Shanghai",todo:bool=False,include_no_time:bool=False):
+    event_tuple=set()
+    zone_start_time=to_zone_datetime(start_time,zone)
+    if todo:
+        events=calendar.search(comp_class=Todo,start=zone_start_time,summary=name)
+        events+=calendar.search(comp_class=Todo,start=zone_start_time,summary=name,status="COMPLETED")
+        if include_no_time:
+            events+=calendar.search(comp_class=Todo,summary=name)
+            events+=calendar.search(comp_class=Todo,summary=name,status="COMPLETED")
+    else:
+        events = calendar.search(comp_class=Event,start=zone_start_time,summary=name)
+    for event in events:
+        current_name=str(event.icalendar_component["SUMMARY"])
+        if re.match(f".*{name}.*",current_name)!=None:
+            if todo:
+                event_tuple.add(
+                    (current_name, str(event.icalendar_component["UID"]), event.icalendar_component["DTSTART"].dt if event.icalendar_component.get("DTSTART","")!="" else None,
+                        event.icalendar_component["DUE"].dt if event.icalendar_component.get("DUE","")!="" else None))
+            else:
+                event_tuple.add(
+                    (current_name, str(event.icalendar_component["UID"]), event.icalendar_component["DTSTART"].dt,
+                        event.icalendar_component["DTEND"].dt))
+        
     # 整理成文字
     text=""""""
     for et in event_tuple:
@@ -139,38 +142,35 @@ def time_zone_splits(time_zones:Dict,data:List[str]|List[None])->List[datetime]:
     :return: 分类后的数据列表
     """
     time_zones2=deepcopy(time_zones)
-    try:
-        if not data:
-            return []
-        if None in data:
-            return []
-        new_times=[]
-        if "all" in time_zones2.keys():
-            for d in data:
-                time_zone_time=to_zone_datetime(d, time_zones2["all"])
+    if not data:
+        return []
+    if None in data:
+        return []
+    new_times=[]
+    if "all" in time_zones2.keys():
+        for d in data:
+            time_zone_time=to_zone_datetime(d, time_zones2["all"])
+            new_times.append(time_zone_time)
+        return new_times
+    elif "other" in time_zones2.keys():
+        other_time_zone=time_zones2["other"]
+        del time_zones2["other"]
+        special_time_zone=list(time_zones2.keys())
+        for i,v in enumerate(data):
+            if str(i) in special_time_zone:
+                time_zone_time=to_zone_datetime(v, time_zones2[str(i)])
                 new_times.append(time_zone_time)
-            return new_times
-        elif "other" in time_zones2.keys():
-            other_time_zone=time_zones2["other"]
-            del time_zones2["other"]
-            special_time_zone=list(time_zones2.keys())
-            for i,v in enumerate(data):
-                if str(i) in special_time_zone:
-                    time_zone_time=to_zone_datetime(v, time_zones2[str(i)])
-                    new_times.append(time_zone_time)
-                else:
-                    time_zone_time=to_zone_datetime(v, other_time_zone)
-                    new_times.append(time_zone_time)
-            return new_times
-        else:
-            special_time_zone = list(time_zones2.keys())
-            for i, v in enumerate(data):
-                if i in special_time_zone:
-                    time_zone_time = to_zone_datetime(v, time_zones2[str(i)])
-                    new_times.append(time_zone_time)
-            return new_times
-    except Exception as e:
-        raise e
+            else:
+                time_zone_time=to_zone_datetime(v, other_time_zone)
+                new_times.append(time_zone_time)
+        return new_times
+    else:
+        special_time_zone = list(time_zones2.keys())
+        for i, v in enumerate(data):
+            if i in special_time_zone:
+                time_zone_time = to_zone_datetime(v, time_zones2[str(i)])
+                new_times.append(time_zone_time)
+        return new_times
 def alarm_time_splits(alarm_times:Dict, data: List[datetime] | List[None])->List[datetime]:
     """
     将数据根据提醒时间分类
@@ -179,32 +179,29 @@ def alarm_time_splits(alarm_times:Dict, data: List[datetime] | List[None])->List
     :return: 分类后的已经计算好的时间。
     """
     alarm_times2=deepcopy(alarm_times)
-    try:
-        if not data:
-            return []
-        if None in data:
-            return []
-        remind_times=[]
-        if "all" in alarm_times2:
-            for d in range(len(data)):
-                remind_times.append(alarm_times2["all"])
-        elif "other" in alarm_times2:
-            other_remind_time=alarm_times2["other"]
-            del alarm_times2["other"]
-            special_alarm=list(alarm_times2.keys())
-            for i,v in enumerate(data):
-                if str(i) in special_alarm:
-                    remind_times.append(alarm_times2[str(i)])
-                else:
-                    remind_times.append(other_remind_time)
-        new_times=[]
-        for i,rt in enumerate(remind_times):
-            time_unit=re.split("^([+-]\d+)(mo|m|h|d|w)$",rt)[1:3]
-            time=time_calc(data[i],int(time_unit[0]),time_unit[1])
-            new_times.append(time)
-        return new_times
-    except Exception as e:
-        raise e
+    if not data:
+        return []
+    if None in data:
+        return []
+    remind_times=[]
+    if "all" in alarm_times2:
+        for d in range(len(data)):
+            remind_times.append(alarm_times2["all"])
+    elif "other" in alarm_times2:
+        other_remind_time=alarm_times2["other"]
+        del alarm_times2["other"]
+        special_alarm=list(alarm_times2.keys())
+        for i,v in enumerate(data):
+            if str(i) in special_alarm:
+                remind_times.append(alarm_times2[str(i)])
+            else:
+                remind_times.append(other_remind_time)
+    new_times=[]
+    for i,rt in enumerate(remind_times):
+        time_unit=re.split("^([+-]\d+)(mo|m|h|d|w)$",rt)[1:3]
+        time=time_calc(data[i],int(time_unit[0]),time_unit[1])
+        new_times.append(time)
+    return new_times
 def time_zone_splits_text(time_zones:Dict,data:List[str]|List[None])->List[str]:
     """
     将数据根据时区分类，返回字符串类型
@@ -212,41 +209,37 @@ def time_zone_splits_text(time_zones:Dict,data:List[str]|List[None])->List[str]:
     :param data: 数据列表
     :return: 分类后的对应数据列表
     """
-    try:
-        if not data:
-            return []
-        if None in data:
-            return []
-        new_times=[]
-        if "all" in time_zones.keys():
-            for d in data:
-                time_zone_time=to_zone_datetime(d, time_zones["all"])
-                new_times.append(time_zone_time)
-            return new_times
-        elif "other" in time_zones.keys():
-            other_time_zone=time_zones["other"]
-            del time_zones["other"]
-            special_time_zone=list(time_zones.keys())
-            for i,v in enumerate(data):
-                if i in special_time_zone:
-                    time_zone=time_zones[str(special_time_zone[i])]
-                    time_zone_time=to_zone_datetime(v, time_zone)
-                    new_times.append(time_zone_time.strftime("%Y-%m-%dT%H:%M")+f"({time_zone})")
-                else:
-                    time_zone_time=to_zone_datetime(v, other_time_zone)
-                    new_times.append(time_zone_time.strftime("%Y-%m-%dT%H:%M")+f"({other_time_zone})")
-            return new_times
-        else:
-            special_time_zone = list(time_zones.keys())
-            for i, v in enumerate(data):
-                if i in special_time_zone:
-                    time_zone=time_zones[str(special_time_zone[i])]
-                    time_zone_time = to_zone_datetime(v, time_zone)
-                    new_times.append(time_zone_time.strftime("%Y-%m-%dT%H:%M")+f"({time_zone})")
-            return new_times
-    except Exception as e:
-        raise e
+    if not data:
         return []
+    if None in data:
+        return []
+    new_times=[]
+    if "all" in time_zones.keys():
+        for d in data:
+            time_zone_time=to_zone_datetime(d, time_zones["all"])
+            new_times.append(time_zone_time)
+        return new_times
+    elif "other" in time_zones.keys():
+        other_time_zone=time_zones["other"]
+        del time_zones["other"]
+        special_time_zone=list(time_zones.keys())
+        for i,v in enumerate(data):
+            if i in special_time_zone:
+                time_zone=time_zones[str(special_time_zone[i])]
+                time_zone_time=to_zone_datetime(v, time_zone)
+                new_times.append(time_zone_time.strftime("%Y-%m-%dT%H:%M")+f"({time_zone})")
+            else:
+                time_zone_time=to_zone_datetime(v, other_time_zone)
+                new_times.append(time_zone_time.strftime("%Y-%m-%dT%H:%M")+f"({other_time_zone})")
+        return new_times
+    else:
+        special_time_zone = list(time_zones.keys())
+        for i, v in enumerate(data):
+            if i in special_time_zone:
+                time_zone=time_zones[str(special_time_zone[i])]
+                time_zone_time = to_zone_datetime(v, time_zone)
+                new_times.append(time_zone_time.strftime("%Y-%m-%dT%H:%M")+f"({time_zone})")
+        return new_times
 def to_str_datetime(dt:datetime,format:str="%Y-%m-%dT%H:%M")->str:
     """
     将datetime对象转换为字符串

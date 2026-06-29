@@ -144,39 +144,40 @@ async def creat_todos(calendar_name:str, names:List[str], start_times:List[str],
     success_info = "成功："
     fail_info = "失败："
     if calendar != None:
-        zoned_start_times = time_zone_splits(time_zones, start_times)
-        if end_times!=[]:
-            zoned_end_times = time_zone_splits(time_zones, end_times)
-        else:
-            zoned_end_times=None
-        alarm_times=alarm_time_splits(remind_times,zoned_start_times)
-        for i in range(len(names)):
-            if None not in start_times and None not in end_times!=[]:
-                calendar_info_list.append(
-                    CalendarTodoInfo(calendar_name, names[i], zoned_start_times[i],
-                                     zoned_end_times[i] if zoned_end_times is not None else None,
-                                     priority[i], positions[i],[alarm_times[i]]))
+        try:
+            zoned_start_times = time_zone_splits(time_zones, start_times)
+            if end_times!=[]:
+                zoned_end_times = time_zone_splits(time_zones, end_times)
             else:
-                calendar_info_list.append(CalendarTodoInfo(calendar_name, names[i],
-                                                           zoned_start_times[i] if zoned_start_times is not None else None,
-                                                           zoned_end_times[i] if zoned_end_times is not None else None,
-                                                           priority[i],positions[i],[alarm_times[i]]))
+                zoned_end_times=None
+            alarm_times=alarm_time_splits(remind_times,zoned_start_times)
+            for i in range(len(names)):
+                if None not in start_times and None not in end_times!=[]:
+                    calendar_info_list.append(
+                        CalendarTodoInfo(calendar_name, names[i], zoned_start_times[i],
+                                        zoned_end_times[i] if zoned_end_times is not None else None,
+                                        priority[i], positions[i],[alarm_times[i]]))
+                else:
+                    calendar_info_list.append(CalendarTodoInfo(calendar_name, names[i],
+                                                            zoned_start_times[i] if zoned_start_times is not None else None,
+                                                            zoned_end_times[i] if zoned_end_times is not None else None,
+                                                            priority[i],positions[i],[alarm_times[i]]))
 
-        # 开始写入日历
-        for calendar_info in calendar_info_list:
-            try:
-                event = calendar.save_todo(summary=calendar_info.name, priority=calendar_info.priority,
-                                           dtstart=calendar_info.start_time,
-                                           due=calendar_info.end_time,
-                                           location=calendar_info.location,
-                                           alarm_trigger=calendar_info.alarm_time[0], alarm_action="DISPLAY")
-                if event is not None:
-                    logger.debug(
-                        f"生成任务：{event.icalendar_component['SUMMARY']}，日历：{calendar.get_display_name()}成功")
-                    success_info += calendar_info.name + "\n"
-            except Exception as e:
-                logger.error(f"生成任务：{calendar_info.name}，日历：{calendar.get_display_name()}失败：{e}")
-                fail_info += calendar_info.name + "原因：" + str(e) + "\n"
+            # 开始写入日历
+            for calendar_info in calendar_info_list:
+                
+                    event = calendar.save_todo(summary=calendar_info.name, priority=calendar_info.priority,
+                                            dtstart=calendar_info.start_time,
+                                            due=calendar_info.end_time,
+                                            location=calendar_info.location,
+                                            alarm_trigger=calendar_info.alarm_time[0], alarm_action="DISPLAY")
+                    if event is not None:
+                        logger.debug(
+                            f"生成任务：{event.icalendar_component['SUMMARY']}，日历：{calendar.get_display_name()}成功")
+                        success_info += calendar_info.name + "\n"
+        except Exception as e:
+            logger.error(f"生成任务：{calendar_info.name}，日历：{calendar.get_display_name()}失败：{e}")
+            fail_info += calendar_info.name + "原因：" + str(e) + "\n"
         # 返回结果
         return f"{success_info}\n{fail_info}"
     else:
@@ -205,16 +206,16 @@ async def create_notime_todos(calendar_name:str, names:List[str],priority:List[i
         for i in range(len(names)):
             calendar_info_list.append(
                 CalendarTodoInfo(calendar_name,names[i], None,
-                                 None,
-                                 priority[i],positions[i],[]))
+                                None,
+                                priority[i],positions[i],[]))
 
         # 开始写入日历
         for calendar_info in calendar_info_list:
             try:
                 event = calendar.save_todo(summary=calendar_info.name, priority=calendar_info.priority,
-                                           dtstart=calendar_info.start_time,
-                                           due=calendar_info.end_time,
-                                           location=calendar_info.location)
+                                        dtstart=calendar_info.start_time,
+                                        due=calendar_info.end_time,
+                                        location=calendar_info.location)
                 if event is not None:
                     logger.debug(
                         f"生成任务：{event.icalendar_component['SUMMARY']}，日历：{calendar.get_display_name()}成功")
@@ -239,47 +240,46 @@ async def create_noend_todos(calendar_name:str,start_times:List[str], names:List
     all用来约定所有事件的时区。other则表示在其他事件的时区。
     提醒默认开始前15分钟，使用字典设置每个事件的提醒时间，例如：{'2': '-15m', 'other': '-15m'}。与时区一样也有all键。
     """
+    try:
+        if priority==[]:
+            priority=[0]*len(names)
+        if positions==[]:
+            positions=[""]*len(names)
+        if start_times!=None:
+            data_check(names, start_times, priority)
+            zoned_start_times = time_zone_splits(timezones, start_times)
+        else:
+            logger.error("参数传入错误，start_times不能为空")
+            return "参数传入错误，start_times不能为空"
 
-    if priority==[]:
-        priority=[0]*len(names)
-    if positions==[]:
-        positions=[""]*len(names)
-    if start_times!=None:
-        data_check(names, start_times, priority)
-        zoned_start_times = time_zone_splits(timezones, start_times)
-    else:
-        logger.error("参数传入错误，start_times不能为空")
-        return "参数传入错误，start_times不能为空"
-
-    zoned_remind_times=alarm_time_splits(remind_times,zoned_start_times)
-    principal = client.principal()
-    calendars = principal.calendars()
-    calendar = find_calendar(calendars, calendar_name)
-    calendar_info_list = []
-    success_info = "成功："
-    fail_info = "失败："
-    if calendar != None:
-        for i in range(len(names)):
-            calendar_info_list.append(
-                CalendarTodoInfo(calendar_name,names[i], zoned_start_times[i],
-                                 None,
-                                 priority[i],positions[i],zoned_remind_times))
+        zoned_remind_times=alarm_time_splits(remind_times,zoned_start_times)
+        principal = client.principal()
+        calendars = principal.calendars()
+        calendar = find_calendar(calendars, calendar_name)
+        calendar_info_list = []
+        success_info = "成功："
+        fail_info = "失败："
+        if calendar != None:
+            for i in range(len(names)):
+                calendar_info_list.append(
+                    CalendarTodoInfo(calendar_name,names[i], zoned_start_times[i],
+                                    None,
+                                    priority[i],positions[i],zoned_remind_times))
 
         # 开始写入日历
         for calendar_info in calendar_info_list:
-            try:
-                event = calendar.save_todo(summary=calendar_info.name, priority=calendar_info.priority,
-                                           dtstart=calendar_info.start_time,
-                                           due=calendar_info.end_time,
-                                           location=calendar_info.location,
-                                           alarm_trigger=calendar_info.alarm_time[0], alarm_action="DISPLAY")
-                if event is not None:
-                    logger.debug(
-                        f"生成任务：{event.icalendar_component['SUMMARY']}，日历：{calendar.get_display_name()}成功")
-                    success_info += calendar_info.name + "\n"
-            except Exception as e:
-                logger.error(f"生成任务：{calendar_info.name}，日历：{calendar.get_display_name()}失败：{e}")
-                fail_info += calendar_info.name + "原因：" + str(e) + "\n"
+            event = calendar.save_todo(summary=calendar_info.name, priority=calendar_info.priority,
+                                    dtstart=calendar_info.start_time,
+                                    due=calendar_info.end_time,
+                                    location=calendar_info.location,
+                                    alarm_trigger=calendar_info.alarm_time[0], alarm_action="DISPLAY")
+            if event is not None:
+                logger.debug(
+                    f"生成任务：{event.icalendar_component['SUMMARY']}，日历：{calendar.get_display_name()}成功")
+                success_info += calendar_info.name + "\n"
+    except Exception as e:
+        logger.error(f"生成任务：{calendar_info.name}，日历：{calendar.get_display_name()}失败：{e}")
+        fail_info += calendar_info.name + "原因：" + str(e) + "\n"
         # 返回结果
         return f"{success_info}\n{fail_info}"
     else:
@@ -330,15 +330,14 @@ async def edit_todo(calendar_name:str, uid:str,new_name:str=None, start_time:str
             cal_event=CalendarTodoInfo(calendar_name,new_name if new_name!=None else event.icalendar_component["SUMMARY"],
                                         new_start_time,new_end_time,priority,position)
             ev=calendar.save_todo(uid=uid, summary=cal_event.name, dtstart=cal_event.start_time,
-                                  due=cal_event.end_time, priority=cal_event.priority, alarm_trigger=new_remind_time,
-                                  alarm_action="DISPLAY", location=cal_event.location)
+                                due=cal_event.end_time, priority=cal_event.priority, alarm_trigger=new_remind_time,
+                                alarm_action="DISPLAY", location=cal_event.location)
             if ev is not None:
                 logger.debug(f"修改成功：{cal_event.name}(优先级：{cal_event.priority}){cal_event.start_time}~{cal_event.end_time}")
                 return "修改成功"
         except Exception as e:
             logger.error(f"修改错误，原因：{e}")
             return "修改失败，原因："+str(e)
-
 @todo_mcp.tool("delete_todo")
 @logger.catch()
 async def delete_todo(calendar_name:str, uid:str):

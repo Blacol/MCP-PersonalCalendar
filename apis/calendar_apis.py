@@ -39,21 +39,24 @@ async def list_calendars():
 
 @calendar_mcp.tool("get_something_with_uid")
 @logger.catch()
-async def get_something_with_uid(calendar_name:str, name:str, start_time:str, time_zone:str= 'Asia/Shanghai', isTodo:bool=False):
+async def get_something_with_uid(calendar_name:str, name:str, start_time:str, time_zone:str= 'Asia/Shanghai', is_todo:bool=False,include_no_time:bool=False):
     """
     获取特定时间的日程或待办（带UID）
     """
-
-    principal = client.principal()
-    calendars = principal.calendars()
-    calendar: Calendar = find_calendar(calendars, calendar_name)
-    if calendar is None:
-        logger.warning("没有找到对应日历")
-        return "没有找到对应日历"
-    else:
-        if calendar.name == calendar_name:
-            events = find_events(calendar, name, start_time, time_zone, isTodo)
-            if len(events)==0:
-                return "没有事项或待办"
-            return events
-        return "没有对应日历"
+    try:
+        principal = client.principal()
+        calendars = principal.calendars()
+        calendar: Calendar = find_calendar(calendars, calendar_name)
+        if calendar is None:
+            logger.warning("没有找到对应日历")
+            return "没有找到对应日历"
+        else:
+            if calendar.name == calendar_name:
+                events = find_events(calendar, name, start_time, time_zone, is_todo,include_no_time)
+                if len(events)==0:
+                    return "没有事项或待办"
+                return events
+            return "没有对应日历"
+    except Exception as e:
+        return f"获取失败，原因：{e}"
+    
